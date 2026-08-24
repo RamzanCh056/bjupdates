@@ -36,6 +36,7 @@ android {
         targetSdk =  36
         versionCode flutter.versionCode
         versionName flutter.versionName
+        multiDexEnabled true
         ndk {
             //noinspection ChromeOsAbiSupport
             abiFilters "armeabi-v7a", "arm64-v8a"
