@@ -164,6 +164,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
       }
     }
   }
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _releaseAllReelPlayers();
+    super.dispose();
+  }
 
   Future<void> _deleteReelLikeNotification({
     required String fromUserId,
@@ -2980,6 +2986,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
         Uri.parse(rawUrl),
         videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
       );
+      
+      // Assign early to prevent concurrent initializations
+      _controller = c;
 
       await c.initialize().timeout(
         const Duration(seconds: 35),
@@ -2988,7 +2997,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
         },
       );
 
-      if (!mounted) {
+      if (!mounted || _controller != c) {
+        // Widget unmounted or player disposed/replaced while initializing
         c.dispose();
         return;
       }
@@ -3003,8 +3013,6 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
       c.setVolume(videoVol);
       c.addListener(_videoStateListener);
 
-      _controller = c;
-
       final musicRaw = widget.music != null
           ? (widget.music!['audioUrl'] ?? widget.music!['musicUrl'])
           : null;
@@ -3018,18 +3026,26 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
           await _musicPlayer!.setLoopMode(LoopMode.one);
           await _musicPlayer!.setVolume((widget.musicVolume ?? 0.5).clamp(0.0, 1.0));
           await _musicPlayer!.seek(Duration.zero);
-          _controller?.addListener(_syncMusicWithVideo);
+          
+          if (!mounted || _controller != c) {
+             _musicPlayer?.dispose();
+             _musicPlayer = null;
+             c.dispose();
+             return;
+          }
+          
+          c.addListener(_syncMusicWithVideo);
         } catch (e) {
           debugPrint('Reel music failed to load: $e');
         }
       }
 
       if (widget.isVisible) {
-        await _controller?.play();
+        await c.play();
         await _musicPlayer?.play();
       }
 
-      if (mounted) {
+      if (mounted && _controller == c) {
         setState(() {
           _isInitialized = true;
         });
