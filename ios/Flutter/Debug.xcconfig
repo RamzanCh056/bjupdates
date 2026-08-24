@@ -1,0 +1,4 @@
+#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
+#include "Generated.xcconfig"
+// Flutter may exclude arm64 for legacy plugins; allow native Apple Silicon simulators (iOS 26+).
+EXCLUDED_ARCHS[sdk=iphonesimulator*]=i386

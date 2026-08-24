@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "493935451188",
+    "firebase_url": "https://beatjerky-68aaa-default-rtdb.firebaseio.com",
+    "project_id": "beatjerky-68aaa",
+    "storage_bucket": "beatjerky-68aaa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:493935451188:android:b795f868404783e0587e61",
+        "android_client_info": {
+          "package_name": "com.beatjerky.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4UMyxCSr-HQB8wTC3BZjedEvEimrBgjs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:493935451188:android:6ac4d1b1e5310913587e61",
+        "android_client_info": {
+          "package_name": "com.beatjerky.social"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4UMyxCSr-HQB8wTC3BZjedEvEimrBgjs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

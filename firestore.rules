@@ -1,0 +1,346 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function isOwner(data) {
+      return signedIn() && (
+        data.userId == request.auth.uid ||
+        data.ownerId == request.auth.uid ||
+        data.createdBy == request.auth.uid ||
+        data.sellerId == request.auth.uid
+      );
+    }
+
+    /// chatId is always `{smallerUid}_{largerUid}`.
+    function chatIdContainsUser(chatId) {
+      return signedIn() && (
+        chatId.matches('^' + request.auth.uid + '_.*') ||
+        chatId.matches('.*_' + request.auth.uid + '$')
+      );
+    }
+
+    function chatPath(chatId) {
+      return /databases/$(database)/documents/chats/$(chatId);
+    }
+
+    function isListedParticipant(data) {
+      return data.keys().hasAll(['participants']) &&
+        request.auth.uid in data.participants;
+    }
+
+    function canReadChat(chatId) {
+      return signedIn() && (
+        !exists(chatPath(chatId)) ||
+        isListedParticipant(resource.data) ||
+        (chatIdContainsUser(chatId) && !resource.data.keys().hasAll(['participants']))
+      );
+    }
+
+    function canWriteChat(chatId) {
+      return signedIn() && (
+        (exists(chatPath(chatId)) && isListedParticipant(resource.data)) ||
+        (chatIdContainsUser(chatId) &&
+          (!exists(chatPath(chatId)) || !resource.data.keys().hasAll(['participants'])))
+      );
+    }
+
+    function isChatParticipant(chatId) {
+      return signedIn() && (
+        (exists(chatPath(chatId)) && isListedParticipant(get(chatPath(chatId)).data)) ||
+        chatIdContainsUser(chatId)
+      );
+    }
+
+    // ── Profiles ──────────────────────────────────────────────────────────────
+    match /usersData/{userId} {
+      allow read: if signedIn();
+      allow create: if isSelf(userId);
+      allow update, delete: if isSelf(userId);
+
+      match /planHistory/{historyId} {
+        allow read, write: if isSelf(userId);
+      }
+    }
+
+    // ── Chat (strict) ─────────────────────────────────────────────────────────
+    match /chats/{chatId} {
+      allow read: if canReadChat(chatId);
+
+      allow create: if signedIn() &&
+        chatIdContainsUser(chatId) &&
+        request.auth.uid in request.resource.data.participants &&
+        request.resource.data.participants.size() == 2;
+
+      allow update: if canWriteChat(chatId) || (
+        signedIn() &&
+        chatIdContainsUser(chatId) &&
+        request.auth.uid in request.resource.data.participants
+      );
+
+      allow delete: if signedIn() &&
+        exists(chatPath(chatId)) &&
+        isListedParticipant(resource.data);
+
+      match /messages/{messageId} {
+        allow read: if isChatParticipant(chatId);
+
+        allow create: if isChatParticipant(chatId) &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 4000;
+
+        allow update: if isChatParticipant(chatId) &&
+          (
+            resource.data.senderId == request.auth.uid ||
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['status', 'read'])
+          );
+
+        allow delete: if isChatParticipant(chatId) &&
+          resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    // ── Feed & social content ─────────────────────────────────────────────────
+    match /posts/{postId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update: if signedIn();
+      allow delete: if signedIn() && isOwner(resource.data);
+
+      match /comments/{commentId} {
+        allow read, write: if signedIn();
+      }
+
+      match /likes/{likeId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    match /reels/{reelId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update: if signedIn();
+      allow delete: if signedIn() && isOwner(resource.data);
+
+      match /comments/{commentId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    match /songs/{songId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update: if signedIn();
+      allow delete: if signedIn() && isOwner(resource.data);
+    }
+
+    match /stories/{storyId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+      allow update: if signedIn();
+      allow delete: if signedIn() && isOwner(resource.data);
+
+      match /views/{viewId} {
+        allow read, write: if signedIn();
+      }
+    }
+
+    match /questions/{questionId} {
+      allow read, write: if signedIn();
+    }
+
+    match /reports/{reportId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+    }
+
+    // ── Notifications ───────────────────────────────────────────────────────
+    match /notifications/{userId} {
+      match /userNotifications/{notificationId} {
+        allow read: if isSelf(userId);
+        allow create: if signedIn();
+        allow update, delete: if isSelf(userId);
+      }
+    }
+
+    // ── Rewards, achievements, leaderboard ────────────────────────────────────
+    match /userRewards/{userId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /userAchievements/{userId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+
+      match /achievements/{achievementId} {
+        allow read: if signedIn();
+        allow write: if signedIn();
+      }
+    }
+
+    match /leaderboard/{userId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    // ── AI user subcollections ────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read, write: if isSelf(userId);
+
+      match /ai_library/{docId} {
+        allow read, write: if isSelf(userId);
+      }
+
+      match /ai_generated_beats/{docId} {
+        allow read, write: if isSelf(userId);
+      }
+
+      match /music_coach_chats/{docId} {
+        allow read, write: if isSelf(userId);
+      }
+    }
+
+    // ── Music & artists ───────────────────────────────────────────────────────
+    match /musicTracks/{trackId} {
+      allow read, write: if signedIn();
+    }
+
+    match /musicStyles/{styleId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /musicStores/{storeId} {
+      allow read, write: if signedIn();
+    }
+
+    match /artists/{artistId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /artistSongs/{songId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    // ── Store & commerce ──────────────────────────────────────────────────────
+    match /stores/{storeId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    match /products/{productId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    // ── Events ────────────────────────────────────────────────────────────────
+    match /events/{eventId} {
+      allow read: if signedIn();
+      allow write: if signedIn();
+    }
+
+    // ── Live Collabs ──────────────────────────────────────────────────────────
+    function collabRoomPath(roomId) {
+      return /databases/$(database)/documents/collabRooms/$(roomId);
+    }
+
+    function isCollabParticipant(roomId) {
+      return signedIn() &&
+        exists(collabRoomPath(roomId)) &&
+        request.auth.uid in get(collabRoomPath(roomId)).data.participants;
+    }
+
+    match /collabRooms/{roomId} {
+      // Anyone signed in can look up a room by code (join flow).
+      // Listing is limited to rooms you're in.
+      allow get: if signedIn();
+      allow list: if signedIn() &&
+        request.auth.uid in resource.data.participants;
+
+      allow create: if signedIn() &&
+        request.resource.data.hostId == request.auth.uid &&
+        request.auth.uid in request.resource.data.participants &&
+        request.resource.data.participants.size() >= 1 &&
+        request.resource.data.participants.size() <= 2;
+
+      allow update: if signedIn() && (
+        // Existing participant updating room
+        (request.auth.uid in resource.data.participants) ||
+        // Guest joining a waiting/prep room (adds self to participants)
+        (
+          resource.data.participants.size() < 2 &&
+          request.auth.uid in request.resource.data.participants &&
+          request.resource.data.participants.size() ==
+            resource.data.participants.size() + 1
+        )
+      );
+
+      allow delete: if signedIn() &&
+        resource.data.hostId == request.auth.uid;
+
+      match /messages/{messageId} {
+        allow read: if isCollabParticipant(roomId);
+
+        allow create: if isCollabParticipant(roomId) &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 &&
+          request.resource.data.text.size() <= 4000;
+
+        allow update, delete: if false;
+      }
+    }
+
+    // ── Challenges ────────────────────────────────────────────────────────────
+    match /challenges/{challengeId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() &&
+        request.resource.data.creatorId == request.auth.uid &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 120;
+
+      allow update: if signedIn() && (
+        resource.data.creatorId == request.auth.uid ||
+        // Participants joining / entry count bumps
+        request.auth.uid in request.resource.data.participantIds
+      );
+
+      allow delete: if signedIn() &&
+        resource.data.creatorId == request.auth.uid;
+
+      match /entries/{entryId} {
+        allow read: if signedIn();
+
+        allow create: if signedIn() &&
+          entryId == request.auth.uid &&
+          request.resource.data.userId == request.auth.uid;
+
+        allow update: if signedIn() &&
+          entryId == request.auth.uid &&
+          request.resource.data.userId == request.auth.uid;
+
+        allow delete: if signedIn() && entryId == request.auth.uid;
+      }
+    }
+
+    // ── Fallback: any other collection used by the app ────────────────────────
+    match /{collection}/{docId} {
+      allow read, write: if signedIn();
+    }
+  }
+}
