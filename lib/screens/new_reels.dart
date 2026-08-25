@@ -58,8 +58,10 @@ class _ReelsScreenState extends State<ReelsScreen> {
   late PreloadPageController _pageController;
   int _currentIndex = 0;
   Map<int, GlobalKey<_VideoPlayerWidgetState>> _videoKeys = {};
+
   /// When true, upload-options sheet is open or user is in create flow: no feed video should play in background.
   bool _uploadOptionsSheetOpen = false;
+
   /// 0 = All Feed, 1 = My Feed (only when widget.reelsList == null)
   int _feedTabIndex = 0;
 
@@ -163,6 +165,13 @@ class _ReelsScreenState extends State<ReelsScreen> {
         _likeInProgress[videoId] = false;
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _releaseAllReelPlayers();
+    super.dispose();
   }
 
   Future<void> _deleteReelLikeNotification({
@@ -1415,9 +1424,13 @@ class _ReelsScreenState extends State<ReelsScreen> {
         Map<String, dynamic> musicData = Map<String, dynamic>.from(
           editData['music'] as Map<String, dynamic>,
         );
-        String? audioUrl = (musicData['audioUrl'] ?? musicData['musicUrl'])?.toString().trim();
+        String? audioUrl = (musicData['audioUrl'] ?? musicData['musicUrl'])
+            ?.toString()
+            .trim();
         if (audioUrl != null && audioUrl.isNotEmpty) {
-          final isLocalFile = !audioUrl.startsWith('http://') && !audioUrl.startsWith('https://');
+          final isLocalFile =
+              !audioUrl.startsWith('http://') &&
+              !audioUrl.startsWith('https://');
           if (isLocalFile) {
             try {
               final file = File(audioUrl);
@@ -2328,18 +2341,25 @@ class _ReelsScreenState extends State<ReelsScreen> {
                   child: reelVideoUrl.isEmpty
                       ? _buildReelMissingVideoPlaceholder()
                       : VideoPlayerWidget(
-                    key: _videoKeys[index]!,
-                    videoUrl: reelVideoUrl,
-                    isVisible: index == currentIndex && !_uploadOptionsSheetOpen,
-                    shouldPreload: isInPreloadRange && !_uploadOptionsSheetOpen,
-                    isFirstVideo: index == 0,
-                    filter: data['filter'] as String?,
-                    caption: (data['caption'] is Map) ? data['caption'] as Map<String, dynamic>? : null,
-                    stickers: _stickersListFromReelData(data['stickers']),
-                    music: data['music'] is Map ? data['music'] as Map<String, dynamic>? : null,
-                    musicVolume: (data['musicVolume'] as num?)?.toDouble(),
-                    videoVolume: _reelVideoVolume(data),
-                  ),
+                          key: _videoKeys[index]!,
+                          videoUrl: reelVideoUrl,
+                          isVisible:
+                              index == currentIndex && !_uploadOptionsSheetOpen,
+                          shouldPreload:
+                              isInPreloadRange && !_uploadOptionsSheetOpen,
+                          isFirstVideo: index == 0,
+                          filter: data['filter'] as String?,
+                          caption: (data['caption'] is Map)
+                              ? data['caption'] as Map<String, dynamic>?
+                              : null,
+                          stickers: _stickersListFromReelData(data['stickers']),
+                          music: data['music'] is Map
+                              ? data['music'] as Map<String, dynamic>?
+                              : null,
+                          musicVolume: (data['musicVolume'] as num?)
+                              ?.toDouble(),
+                          videoVolume: _reelVideoVolume(data),
+                        ),
                 ),
                 if (userSnapshot.hasData)
                   Positioned(
@@ -2602,11 +2622,8 @@ class _ReelsScreenState extends State<ReelsScreen> {
                           showModalBottomSheet(
                             context: context,
                             backgroundColor: Colors.transparent,
-                            builder: (ctx) => _buildReelMoreMenu(
-                              ctx,
-                              data,
-                              doc.id,
-                            ),
+                            builder: (ctx) =>
+                                _buildReelMoreMenu(ctx, data, doc.id),
                           );
                         },
                         behavior: HitTestBehavior.opaque,
@@ -2825,6 +2842,7 @@ class VideoPlayerWidget extends StatefulWidget {
   final bool isFirstVideo;
   final String? filter;
   final Map<String, dynamic>? caption;
+
   /// On-video emoji stickers (same shape as editor / preview: emoji, x, y, scale).
   final List<Map<String, dynamic>>? stickers;
   final Map<String, dynamic>? music;
@@ -2870,7 +2888,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
     final delayMs = widget.isVisible ? 0 : 200;
     _initDelayTimer = Timer(Duration(milliseconds: delayMs), () {
       _initDelayTimer = null;
-      if (!mounted || _controller != null || _hasError || !widget.shouldPreload) return;
+      if (!mounted || _controller != null || _hasError || !widget.shouldPreload)
+        return;
       _initializeVideo();
     });
   }
@@ -2917,7 +2936,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
       if (_controller != null) _disposePlayer();
       return;
     }
-    if (preloadChanged && widget.shouldPreload && _controller == null && !_hasError) {
+    if (preloadChanged &&
+        widget.shouldPreload &&
+        _controller == null &&
+        !_hasError) {
       _scheduleInitVideo();
       return;
     }
@@ -2981,6 +3003,9 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
         videoPlayerOptions: VideoPlayerOptions(mixWithOthers: true),
       );
 
+      // Assign early to prevent concurrent initializations
+      _controller = c;
+
       await c.initialize().timeout(
         const Duration(seconds: 35),
         onTimeout: () {
@@ -2988,7 +3013,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
         },
       );
 
-      if (!mounted) {
+      if (!mounted || _controller != c) {
+        // Widget unmounted or player disposed/replaced while initializing
         c.dispose();
         return;
       }
@@ -2996,43 +3022,55 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
       c.setPlaybackSpeed(1.0);
       c.setLooping(true);
       // Use saved video volume: when user chose "Mute original video" we saved 0; otherwise use saved slider value (or default 1 when no music).
-      final hasOverlayMusic = widget.music != null &&
+      final hasOverlayMusic =
+          widget.music != null &&
           (widget.music!['audioUrl']?.toString().trim().isNotEmpty == true ||
               widget.music!['musicUrl']?.toString().trim().isNotEmpty == true);
-      final videoVol = (widget.videoVolume ?? (hasOverlayMusic ? 0.0 : 1.0)).clamp(0.0, 1.0);
+      final videoVol = (widget.videoVolume ?? (hasOverlayMusic ? 0.0 : 1.0))
+          .clamp(0.0, 1.0);
       c.setVolume(videoVol);
       c.addListener(_videoStateListener);
-
-      _controller = c;
 
       final musicRaw = widget.music != null
           ? (widget.music!['audioUrl'] ?? widget.music!['musicUrl'])
           : null;
       final audioUrl = musicRaw != null ? musicRaw.toString().trim() : '';
-      final isHttpUrl = audioUrl.isNotEmpty && (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'));
+      final isHttpUrl =
+          audioUrl.isNotEmpty &&
+          (audioUrl.startsWith('http://') || audioUrl.startsWith('https://'));
       if (isHttpUrl) {
         // handleAudioSessionActivation: false so music does not take audio focus and pause the video
         _musicPlayer = AudioPlayer(handleAudioSessionActivation: false);
         try {
           await _musicPlayer!.setUrl(audioUrl);
           await _musicPlayer!.setLoopMode(LoopMode.one);
-          await _musicPlayer!.setVolume((widget.musicVolume ?? 0.5).clamp(0.0, 1.0));
+          await _musicPlayer!.setVolume(
+            (widget.musicVolume ?? 0.5).clamp(0.0, 1.0),
+          );
           await _musicPlayer!.seek(Duration.zero);
-          _controller?.addListener(_syncMusicWithVideo);
+
+          if (!mounted || _controller != c) {
+            _musicPlayer?.dispose();
+            _musicPlayer = null;
+            c.dispose();
+            return;
+          }
+
+          c.addListener(_syncMusicWithVideo);
         } catch (e) {
           debugPrint('Reel music failed to load: $e');
         }
       }
 
-      if (widget.isVisible) {
-        await _controller?.play();
-        await _musicPlayer?.play();
-      }
-
-      if (mounted) {
+      if (mounted && _controller == c) {
         setState(() {
           _isInitialized = true;
         });
+      }
+
+      if (widget.isVisible) {
+        await c.play();
+        await _musicPlayer?.play();
       }
     } catch (e) {
       print("Error initializing video: $e");
@@ -3126,10 +3164,12 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
 
   void playVideo() {
     if (!mounted || !_isInitialized || _controller == null) return;
-    final hasOverlayMusic = widget.music != null &&
+    final hasOverlayMusic =
+        widget.music != null &&
         (widget.music!['audioUrl']?.toString().trim().isNotEmpty == true ||
             widget.music!['musicUrl']?.toString().trim().isNotEmpty == true);
-    final videoVol = (widget.videoVolume ?? (hasOverlayMusic ? 0.0 : 1.0)).clamp(0.0, 1.0);
+    final videoVol = (widget.videoVolume ?? (hasOverlayMusic ? 0.0 : 1.0))
+        .clamp(0.0, 1.0);
     _controller!.setVolume(videoVol);
     _controller!.play();
     _musicPlayer?.play();
@@ -3304,38 +3344,118 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
     switch (name) {
       case 'Black & White':
         return const ColorFilter.matrix([
-          0.2126, 0.7152, 0.0722, 0, 0,
-          0.2126, 0.7152, 0.0722, 0, 0,
-          0.2126, 0.7152, 0.0722, 0, 0,
-          0, 0, 0, 1, 0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
         ]);
       case 'Vintage':
         return const ColorFilter.matrix([
-          1.2, 0, 0, 0, 0,
-          0, 1.0, 0, 0, 0,
-          0, 0, 0.8, 0, 0,
-          0, 0, 0, 1, 0,
+          1.2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1.0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
         ]);
       case 'Warm':
         return const ColorFilter.matrix([
-          1.2, 0, 0, 0, 0,
-          0, 1.0, 0, 0, 0,
-          0, 0, 0.8, 0, 0,
-          0, 0, 0, 1, 0,
+          1.2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1.0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
         ]);
       case 'Cool':
         return const ColorFilter.matrix([
-          0.8, 0, 0, 0, 0,
-          0, 0.9, 0, 0, 0,
-          0, 0, 1.2, 0, 0,
-          0, 0, 0, 1, 0,
+          0.8,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0.9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1.2,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
         ]);
       case 'Cinematic':
         return const ColorFilter.matrix([
-          0.9, 0.05, 0.05, 0, 0,
-          0.05, 0.9, 0.05, 0, 0,
-          0.05, 0.05, 0.9, 0, 0,
-          0, 0, 0, 1, 0,
+          0.9,
+          0.05,
+          0.05,
+          0,
+          0,
+          0.05,
+          0.9,
+          0.05,
+          0,
+          0,
+          0.05,
+          0.05,
+          0.9,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
         ]);
       default:
         return null;
@@ -3399,6 +3519,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
         ),
       );
     }
+    final positionTop = responsiveHeight(83, context);
 
     return GestureDetector(
       onTap: _togglePlayPause,
@@ -3434,7 +3555,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
                             fit: StackFit.expand,
                             children: [
                               _buildVideoWithFilter(),
-                              if (_hasReelEditOverlays) _buildReelEditOverlays(),
+                              if (_hasReelEditOverlays)
+                                _buildReelEditOverlays(),
                             ],
                           ),
                         ),
@@ -3446,10 +3568,13 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
             ),
           if (_isInitialized && widget.music != null)
             Positioned(
-              top: 50,
+              top: positionTop,
               left: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
@@ -3462,7 +3587,10 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
                     Flexible(
                       child: Text(
                         (widget.music!['title'] as String?) ?? 'Music',
-                        style: const TextStyle(color: Colors.white, fontSize: 12),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -3494,6 +3622,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget>
           // Video controls overlay
           if (_isPaused && _isInitialized)
             Container(
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
