@@ -2661,9 +2661,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Beat Generator') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiBeatGeneratorScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiBeatGeneratorScreen()),
       );
       return;
     }
@@ -2671,9 +2669,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Vocal Enhancer') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiVocalEnhancerScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiVocalEnhancerScreen()),
       );
       return;
     }
@@ -2681,9 +2677,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Lyrics Writer') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiLyricsWriterScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiLyricsWriterScreen()),
       );
       return;
     }
@@ -2691,9 +2685,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Music Coach') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiMusicCoachScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiMusicCoachScreen()),
       );
       return;
     }
@@ -2711,9 +2703,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Mood Radio') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiMoodRadioScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiMoodRadioScreen()),
       );
       return;
     }
@@ -2721,9 +2711,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'Stem Splitter') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const StemSplitterScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const StemSplitterScreen()),
       );
       return;
     }
@@ -2731,18 +2719,14 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'Script to Music') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const ScriptToMusicScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const ScriptToMusicScreen()),
       );
       return;
     }
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => BJAI(initialPrompt: tool.prompt),
-      ),
+      MaterialPageRoute(builder: (context) => BJAI(initialPrompt: tool.prompt)),
     );
   }
 
@@ -2952,7 +2936,9 @@ class _Home1State extends State<Home1> {
       color: bg,
       child: Center(
         child: Text(
-          label.isEmpty ? 'T' : (label.length > 2 ? label.substring(0, 2) : label),
+          label.isEmpty
+              ? 'T'
+              : (label.length > 2 ? label.substring(0, 2) : label),
           style: TextStyle(
             color: tc,
             fontSize: 14,
@@ -3623,7 +3609,9 @@ class _Home1State extends State<Home1> {
                                         Text(
                                           song['year'] ?? '',
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(0.5),
+                                            color: Colors.white.withOpacity(
+                                              0.5,
+                                            ),
                                             fontSize: r(12),
                                           ),
                                         ),
@@ -3668,10 +3656,8 @@ class _Home1State extends State<Home1> {
                                   color: Colors.blue,
                                   size: 18,
                                 ),
-                                onPressed: () => showEditSongBottomSheet(
-                                  context,
-                                  song,
-                                ),
+                                onPressed: () =>
+                                    showEditSongBottomSheet(context, song),
                                 padding: const EdgeInsets.all(8),
                                 constraints: const BoxConstraints(),
                               ),
@@ -3857,6 +3843,8 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
   // Video playback for video stories
   VideoPlayerController? _videoController;
   bool _isVideoReady = false;
+  // Image preloading for image stories (timer waits until the image is ready).
+  bool _isImageReady = false;
   // Auto-advance duration for text & image stories (ms). Video uses its own length.
   static const double _staticStoryDurationMs = 5000;
 
@@ -4202,31 +4190,65 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
     final oldController = _videoController;
     _videoController = null;
     _isVideoReady = false;
+    _isImageReady = false;
     oldController?.dispose();
 
     if (_currentIndex < 0 || _currentIndex >= widget.stories.length) return;
     final story = widget.stories[_currentIndex];
-    if (!story.isVideo || story.content.isEmpty) return;
 
-    final controller = VideoPlayerController.networkUrl(
-      Uri.parse(story.content),
-    );
-    _videoController = controller;
-    controller
-        .initialize()
-        .then((_) {
-          if (!mounted || _videoController != controller) return;
-          controller.setLooping(false);
-          controller.play();
+    // Video story: create + initialize a controller; timer waits for _isVideoReady.
+    if (story.isVideo) {
+      if (story.content.isEmpty) return;
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(story.content),
+      );
+      _videoController = controller;
+      controller
+          .initialize()
+          .then((_) {
+            if (!mounted || _videoController != controller) return;
+            controller.setLooping(false);
+            controller.play();
+            setState(() {
+              _isVideoReady = true;
+              _progress = 0.0;
+            });
+          })
+          .catchError((_) {
+            if (!mounted || _videoController != controller) return;
+            setState(() => _isVideoReady = false);
+          });
+      return;
+    }
+
+    // Image story: preload so the timer only starts once it's on screen.
+    if (story.isImage && story.content.isNotEmpty) {
+      bool stillCurrent() =>
+          mounted &&
+          _currentIndex >= 0 &&
+          _currentIndex < widget.stories.length &&
+          widget.stories[_currentIndex].id == story.id;
+      precacheImage(
+        NetworkImage(story.content),
+        context,
+        onError: (_, __) {
+          if (!stillCurrent()) return;
           setState(() {
-            _isVideoReady = true;
+            _isImageReady = true; // show error placeholder; don't stall forever
             _progress = 0.0;
           });
-        })
-        .catchError((_) {
-          if (!mounted || _videoController != controller) return;
-          setState(() => _isVideoReady = false);
+        },
+      ).then((_) {
+        if (!stillCurrent()) return;
+        setState(() {
+          _isImageReady = true;
+          _progress = 0.0;
         });
+      });
+      return;
+    }
+
+    // Text story: nothing to load (renders immediately).
   }
 
   void _startStoryTimer() {
@@ -4237,7 +4259,8 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
       if (!mounted || _isTimerPaused) {
         return;
       }
-      final story = (_currentIndex >= 0 && _currentIndex < widget.stories.length)
+      final story =
+          (_currentIndex >= 0 && _currentIndex < widget.stories.length)
           ? widget.stories[_currentIndex]
           : null;
 
@@ -4252,8 +4275,12 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
         final posMs = controller.value.position.inMilliseconds;
         if (durMs <= 0) return;
         next = (posMs >= durMs - 60) ? 1.0 : (posMs / durMs);
+      } else if (story != null && story.isImage) {
+        // Image: wait until it has loaded before advancing.
+        if (!_isImageReady) return;
+        next = _progress + (50.0 / _staticStoryDurationMs);
       } else {
-        // Text / image: fixed duration.
+        // Text: fixed duration.
         next = _progress + (50.0 / _staticStoryDurationMs);
       }
 
@@ -4409,7 +4436,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
         children: [
           // Story Content
           Positioned.fill(
-            bottom: isOwnStory ? 80 : 0, // Leave space for view count button
+            bottom: 0, // Story content fills the full screen
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapUp: _onTapUp,
@@ -4493,11 +4520,6 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 6),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
-                ),
               ),
               child: Row(
                 children: [
@@ -4809,20 +4831,34 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
       return _buildTextStoryContent(story);
     }
     // Image story
-    return Container(
-      width: double.infinity,
-      height: double.infinity,
-      color: Colors.black,
-      child: Image.network(
-        story.content,
-        fit: BoxFit.contain,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (context, error, stackTrace) {
-          return const Center(
-            child: Icon(Icons.image, color: Colors.white54, size: 60),
-          );
-        },
+    final isActive =
+        _currentIndex >= 0 &&
+        _currentIndex < widget.stories.length &&
+        widget.stories[_currentIndex].id == story.id;
+    return SizedBox.expand(
+      child: ColoredBox(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              story.content,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Icon(Icons.image, color: Colors.white54, size: 60),
+                );
+              },
+            ),
+            if (isActive && !_isImageReady)
+              const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -4835,13 +4871,29 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
     final controller = _videoController;
 
     if (isActive && controller != null && _isVideoReady) {
-      final ar = controller.value.aspectRatio;
-      return Container(
-        color: Colors.black,
-        alignment: Alignment.center,
-        child: AspectRatio(
-          aspectRatio: (ar.isFinite && ar > 0) ? ar : (9 / 16),
-          child: VideoPlayer(controller),
+      // Match the app's proven reel playback pattern: rebuild with the
+      // controller so the true frame size is used, then BoxFit.cover to fill
+      // the screen full-bleed while preserving aspect ratio (no stretching).
+      return SizedBox.expand(
+        child: ColoredBox(
+          color: Colors.black,
+          child: ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) {
+              final vSize = controller.value.size;
+              final vw = vSize.width > 0 ? vSize.width : 9.0;
+              final vh = vSize.height > 0 ? vSize.height : 16.0;
+              return FittedBox(
+                fit: BoxFit.cover,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: vw,
+                  height: vh,
+                  child: VideoPlayer(controller),
+                ),
+              );
+            },
+          ),
         ),
       );
     }
