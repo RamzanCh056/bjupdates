@@ -921,6 +921,13 @@ class _VideoStoryEditorScreenState extends State<VideoStoryEditorScreen> {
   final List<_VideoTextOverlay> _overlays = [];
   Size _previewSize = Size.zero;
 
+  // Source-derived geometry (set once the video is initialized). Using the
+  // video's own aspect/size for preview + export keeps them identical and
+  // avoids stretching a non-9:16 clip into a fixed frame.
+  double _videoAspect = 9 / 16;
+  int _exportW = 1080;
+  int _exportH = 1920;
+
   // Trim
   double _durationMs = 0;
   RangeValues _trim = const RangeValues(0, 0);
@@ -960,6 +967,25 @@ class _VideoStoryEditorScreenState extends State<VideoStoryEditorScreen> {
       await c.initialize();
       if (!mounted) return;
       c.setLooping(true);
+
+      // Derive preview aspect + export size from the actual video so nothing
+      // gets stretched into a fixed 9:16 frame.
+      final vs = c.value.size;
+      if (vs.width > 0 && vs.height > 0) {
+        _videoAspect = vs.width / vs.height;
+        double sw = vs.width, sh = vs.height;
+        const double maxDim =
+            1920; // cap the long side to keep files reasonable
+        final double longSide = sw > sh ? sw : sh;
+        final double scale = longSide > maxDim ? maxDim / longSide : 1.0;
+        int ew = (sw * scale).round();
+        int eh = (sh * scale).round();
+        ew -= ew % 2; // even dimensions required by most codecs
+        eh -= eh % 2;
+        _exportW = ew < 2 ? 2 : ew;
+        _exportH = eh < 2 ? 2 : eh;
+      }
+
       final durMs = c.value.duration.inMilliseconds.toDouble();
       _durationMs = durMs;
       final cap = (StoryCreator.maxVideoSeconds * 1000).toDouble();
@@ -1097,8 +1123,9 @@ class _VideoStoryEditorScreenState extends State<VideoStoryEditorScreen> {
     });
     _controller?.pause();
 
-    const int exportWidth = 1080;
-    const int exportHeight = 1920;
+    // Export at the video's own dimensions so the framing/quality is preserved.
+    final int exportWidth = _exportW;
+    final int exportHeight = _exportH;
 
     try {
       final overlayBytes = await _buildOverlayBytes(exportWidth, exportHeight);
@@ -1116,7 +1143,7 @@ class _VideoStoryEditorScreenState extends State<VideoStoryEditorScreen> {
         startTime: Duration(milliseconds: startMs),
         endTime: Duration(milliseconds: endMs),
         bitrate: 4500000,
-        transform: const ExportTransform(
+        transform: ExportTransform(
           flipX: false,
           flipY: false,
           x: 0,
@@ -1177,45 +1204,33 @@ class _VideoStoryEditorScreenState extends State<VideoStoryEditorScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // Video preview (9:16 frame) with overlays.
+            // Video preview at the video's own aspect ratio (no distortion),
+            // with the draggable text overlays on top. Preview geometry matches
+            // the export geometry so what you see is what gets rendered.
             Positioned(
               child: Center(
-                child: AspectRatio(
-                  aspectRatio: 9 / 16,
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      _previewSize = Size(
-                        constraints.maxWidth,
-                        constraints.maxHeight,
-                      );
-                      return ClipRect(
-                        child: Stack(
-                          children: [
-                            if (_ready && c != null)
-                              Positioned.fill(
-                                child: FittedBox(
-                                  fit: BoxFit.cover,
-                                  child: SizedBox(
-                                    width: c.value.size.width,
-                                    height: c.value.size.height,
-                                    child: VideoPlayer(c),
-                                  ),
-                                ),
-                              )
-                            else
-                              const Center(
-                                child: CircularProgressIndicator(
-                                  color: recntsColor,
-                                ),
+                child: _ready && c != null
+                    ? AspectRatio(
+                        aspectRatio: _videoAspect > 0 ? _videoAspect : (9 / 16),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            _previewSize = Size(
+                              constraints.maxWidth,
+                              constraints.maxHeight,
+                            );
+                            return ClipRect(
+                              child: Stack(
+                                children: [
+                                  // Fills the aspect box exactly -> undistorted.
+                                  Positioned.fill(child: VideoPlayer(c)),
+                                  for (final o in _overlays) _overlayWidget(o),
+                                ],
                               ),
-                            // Overlays
-                            for (final o in _overlays) _overlayWidget(o),
-                          ],
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      )
+                    : const CircularProgressIndicator(color: recntsColor),
               ),
             ),
 

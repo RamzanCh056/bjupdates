@@ -4519,8 +4519,6 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
             right: 12,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-              ),
               child: Row(
                 children: [
                   // User Avatar (tap to open profile)
@@ -4871,9 +4869,6 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
     final controller = _videoController;
 
     if (isActive && controller != null && _isVideoReady) {
-      // Match the app's proven reel playback pattern: rebuild with the
-      // controller so the true frame size is used, then BoxFit.cover to fill
-      // the screen full-bleed while preserving aspect ratio (no stretching).
       return SizedBox.expand(
         child: ColoredBox(
           color: Colors.black,
@@ -4884,7 +4879,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
               final vw = vSize.width > 0 ? vSize.width : 9.0;
               final vh = vSize.height > 0 ? vSize.height : 16.0;
               return FittedBox(
-                fit: BoxFit.cover,
+                fit: BoxFit.fitWidth,
                 clipBehavior: Clip.hardEdge,
                 child: SizedBox(
                   width: vw,
