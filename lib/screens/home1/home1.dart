@@ -23,6 +23,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:provider/provider.dart';
+import 'package:video_player/video_player.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'story_creator.dart';
 import '../artist_screens/artist_screen.dart';
 import '../event_screens/event_screen.dart';
 import '../../providers/user_provider.dart';
@@ -2658,9 +2661,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Beat Generator') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiBeatGeneratorScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiBeatGeneratorScreen()),
       );
       return;
     }
@@ -2668,9 +2669,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Vocal Enhancer') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiVocalEnhancerScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiVocalEnhancerScreen()),
       );
       return;
     }
@@ -2678,9 +2677,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Lyrics Writer') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiLyricsWriterScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiLyricsWriterScreen()),
       );
       return;
     }
@@ -2688,9 +2685,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Music Coach') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiMusicCoachScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiMusicCoachScreen()),
       );
       return;
     }
@@ -2708,9 +2703,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'AI Mood Radio') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const AiMoodRadioScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const AiMoodRadioScreen()),
       );
       return;
     }
@@ -2718,9 +2711,7 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'Stem Splitter') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const StemSplitterScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const StemSplitterScreen()),
       );
       return;
     }
@@ -2728,18 +2719,14 @@ class _Home1State extends State<Home1> {
     if (tool.title == 'Script to Music') {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (context) => const ScriptToMusicScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const ScriptToMusicScreen()),
       );
       return;
     }
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => BJAI(initialPrompt: tool.prompt),
-      ),
+      MaterialPageRoute(builder: (context) => BJAI(initialPrompt: tool.prompt)),
     );
   }
 
@@ -2770,7 +2757,7 @@ class _Home1State extends State<Home1> {
         children: [
           GestureDetector(
             onTap: () {
-              _showCreateStoryDialog();
+              _openStoryCreator();
             },
             child: Container(
               width: 58,
@@ -2845,39 +2832,7 @@ class _Home1State extends State<Home1> {
               padding: const EdgeInsets.all(2),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(27),
-                child: firstStory.isImage
-                    ? Image.network(
-                        firstStory.content,
-                        fit: BoxFit.cover,
-                        width: 52,
-                        height: 52,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: darkBackgroundTertiary,
-                            child: const Icon(
-                              Icons.image_rounded,
-                              color: Color(0xFFBB86FC),
-                              size: 24,
-                            ),
-                          );
-                        },
-                      )
-                    : Container(
-                        color: darkBackgroundTertiary,
-                        child: Center(
-                          child: Text(
-                            firstStory.content.length > 2
-                                ? firstStory.content.substring(0, 2)
-                                : firstStory.content,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+                child: _storyTrayThumb(firstStory),
               ),
             ),
           ),
@@ -2915,567 +2870,84 @@ class _Home1State extends State<Home1> {
     );
   }
 
-  // Show Create Story Dialog
-  void _showCreateStoryDialog() {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E1E1E),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 20,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Colors.white.withOpacity(0.1),
-                      width: 1,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        gradient: appGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.add_photo_alternate,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: Text(
-                        'Create Story',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: Icon(
-                        Icons.close,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              // Options
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    // Image Story Option
-                    InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _pickImageForStory();
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A2A),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFBB86FC).withOpacity(0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                gradient: appGradient,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.image,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Image Story',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Share a photo or image',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: Colors.white.withOpacity(0.5),
-                              size: 18,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Text Story Option
-                    InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _showTextStoryDialog();
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2A2A2A),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: const Color(0xFFBB86FC).withOpacity(0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                gradient: appGradient,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.text_fields,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 20),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Text Story',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Share your thoughts with text',
-                                    style: TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: Colors.white.withOpacity(0.5),
-                              size: 18,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+  // Open the new full-featured story creator (text / photo / video).
+  Future<void> _openStoryCreator() async {
+    await StoryCreator.open(
+      context,
+      resolveDisplayName: _resolveDisplayName,
+      onPosted: () async {
+        await fetchStories();
+      },
     );
   }
 
-  // Show Text Story Dialog
-  void _showTextStoryDialog() {
-    final TextEditingController textController = TextEditingController();
-    showDialog(
-      context: context,
-      barrierColor: Colors.black87,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 20,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        bottom: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            gradient: appGradient,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(
-                            Icons.text_fields,
-                            color: Colors.white,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        const Expanded(
-                          child: Text(
-                            'Create Text Story',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.close,
-                            color: Colors.white.withOpacity(0.7),
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Content
-                  Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'What\'s on your mind?',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2A2A2A),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFFBB86FC).withOpacity(0.3),
-                              width: 1.5,
-                            ),
-                          ),
-                          child: TextField(
-                            controller: textController,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              height: 1.5,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'Type your story here...',
-                              hintStyle: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
-                                fontSize: 16,
-                              ),
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.all(20),
-                            ),
-                            maxLines: 6,
-                            minLines: 4,
-                            maxLength: 500,
-                            textCapitalization: TextCapitalization.sentences,
-                            autofocus: true,
-                            onChanged: (value) {
-                              setDialogState(() {});
-                            },
-                            buildCounter:
-                                (
-                                  context, {
-                                  required currentLength,
-                                  required isFocused,
-                                  maxLength,
-                                }) => Padding(
-                                  padding: const EdgeInsets.only(top: 8.0),
-                                  child: Text(
-                                    '$currentLength/$maxLength',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.5),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Actions
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 16,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(
-                          color: Colors.white.withOpacity(0.1),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 12,
-                            ),
-                          ),
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: appGradient,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ElevatedButton(
-                            onPressed: textController.text.trim().isNotEmpty
-                                ? () {
-                                    _createTextStory(
-                                      textController.text.trim(),
-                                    );
-                                    Navigator.pop(context);
-                                  }
-                                : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              shadowColor: Colors.transparent,
-                              disabledBackgroundColor: Colors.transparent,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 12,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Create Story',
-                              style: TextStyle(
-                                color: textController.text.trim().isNotEmpty
-                                    ? Colors.white
-                                    : Colors.white.withOpacity(0.5),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+  // Thumbnail shown in the horizontal stories tray for a user's first story.
+  Widget _storyTrayThumb(StoryModel story) {
+    if (story.isImage) {
+      return Image.network(
+        story.content,
+        fit: BoxFit.cover,
+        width: 52,
+        height: 52,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: darkBackgroundTertiary,
+            child: const Icon(
+              Icons.image_rounded,
+              color: Color(0xFFBB86FC),
+              size: 24,
             ),
           );
         },
+      );
+    }
+    if (story.isVideo) {
+      final hasThumb =
+          story.thumbnailUrl != null && story.thumbnailUrl!.isNotEmpty;
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          if (hasThumb)
+            Image.network(
+              story.thumbnailUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) =>
+                  Container(color: darkBackgroundTertiary),
+            )
+          else
+            Container(color: darkBackgroundTertiary),
+          const Center(
+            child: Icon(
+              Icons.play_circle_fill,
+              color: Colors.white70,
+              size: 22,
+            ),
+          ),
+        ],
+      );
+    }
+    // Text story: colored circle with initials.
+    final bg = story.backgroundColor != null
+        ? Color(story.backgroundColor!)
+        : darkBackgroundTertiary;
+    final tc = story.textColor != null ? Color(story.textColor!) : Colors.white;
+    final label = story.content.trim();
+    return Container(
+      color: bg,
+      child: Center(
+        child: Text(
+          label.isEmpty
+              ? 'T'
+              : (label.length > 2 ? label.substring(0, 2) : label),
+          style: TextStyle(
+            color: tc,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
-  }
-
-  // Pick Image for Story
-  // Replace your _pickImageForStory method with this:
-  void _pickImageForStory() async {
-    try {
-      final ImagePicker picker = ImagePicker();
-
-      // Allow multiple image selection
-      final List<XFile> images = await picker.pickMultiImage(
-        maxWidth: 1080,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-
-      if (images.isEmpty) return;
-
-      // Navigate to preview screen for all images
-      final result = await Navigator.push<bool>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => StoryImagesPreviewScreen(
-            images: images,
-            onUpload: (List<Map<String, dynamic>> imagesData) async {
-              // Upload all images with their texts
-              Fluttertoast.showToast(
-                msg:
-                    "Uploading ${imagesData.length} ${imagesData.length > 1 ? 'stories' : 'story'}...",
-              );
-
-              for (int i = 0; i < imagesData.length; i++) {
-                final imageData = imagesData[i];
-                final image = imageData['image'] as XFile;
-                final textContent = imageData['text'] as String?;
-
-                // Upload image to Firebase Storage
-                final ref = FirebaseStorage.instance.ref().child(
-                  'stories/${DateTime.now().millisecondsSinceEpoch}_$i.jpg',
-                );
-
-                await ref.putFile(File(image.path));
-                final imageUrl = await ref.getDownloadURL();
-
-                // Create story in Firestore
-                final currentUser = FirebaseAuth.instance.currentUser;
-                if (currentUser != null) {
-                  final ownerName = await _resolveDisplayName(currentUser.uid);
-
-                  final storyData = {
-                    'username': ownerName,
-                    'content': imageUrl,
-                    'textContent': textContent,
-                    'isImage': true,
-                    'isLive': false,
-                    'timestamp': Timestamp.fromDate(
-                      DateTime.now().add(Duration(seconds: i)),
-                    ),
-                    'ownerId': currentUser.uid,
-                    'ownerName': ownerName,
-                    'viewers': <String>[],
-                    'expiryTime': Timestamp.fromDate(
-                      DateTime.now().add(const Duration(hours: 24)),
-                    ),
-                  };
-
-                  await FirebaseFirestore.instance
-                      .collection('stories')
-                      .add(storyData);
-                }
-
-                // Small delay between uploads
-                if (i < imagesData.length - 1) {
-                  await Future.delayed(const Duration(milliseconds: 300));
-                }
-              }
-
-              // Refresh stories
-              await fetchStories();
-
-              Fluttertoast.showToast(
-                msg: imagesData.length > 1
-                    ? "${imagesData.length} stories uploaded successfully!"
-                    : "Story uploaded successfully!",
-              );
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      Fluttertoast.showToast(msg: "Error uploading image story: $e");
-    }
-  }
-
-  // Create Text Story
-  Future<void> _createTextStory(String text) async {
-    try {
-      // Show loading
-      Fluttertoast.showToast(msg: "Creating text story...");
-
-      // Create story in Firestore
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        // Resolve actual display name for the current user
-        final ownerName = await _resolveDisplayName(currentUser.uid);
-
-        final storyData = {
-          'username': ownerName,
-          'content': text,
-          'textContent': text,
-          'isImage': false,
-          'isLive': false,
-          'timestamp': Timestamp.fromDate(DateTime.now()),
-          'ownerId': currentUser.uid,
-          'ownerName': ownerName,
-          'viewers': <String>[],
-          'expiryTime': Timestamp.fromDate(
-            DateTime.now().add(const Duration(hours: 24)),
-          ),
-        };
-
-        await FirebaseFirestore.instance.collection('stories').add(storyData);
-
-        // Refresh stories
-        await fetchStories();
-
-        Fluttertoast.showToast(msg: "Text story created successfully!");
-      }
-    } catch (e) {
-      Fluttertoast.showToast(msg: "Error creating text story: $e");
-    }
   }
 
   // Track story view with timestamp in a dedicated subcollection
@@ -3689,175 +3161,6 @@ class _Home1State extends State<Home1> {
     }
   }
 
-  // Build Add Text Dialog with Image Preview
-  Widget _buildAddTextDialog({
-    required XFile image,
-    required TextEditingController textController,
-    required int imageNumber,
-    required int totalImages,
-  }) {
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(16),
-      child: Container(
-        constraints: const BoxConstraints(maxHeight: 700),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1F1F1F),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF2A2A2A),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(20),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    totalImages > 1
-                        ? 'Image $imageNumber of $totalImages'
-                        : 'Add Text to Image?',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.pop(context, {'skip': true}),
-                  ),
-                ],
-              ),
-            ),
-
-            // Image Preview
-            Flexible(
-              child: Container(
-                margin: const EdgeInsets.all(16),
-                constraints: const BoxConstraints(maxHeight: 400),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFBB86FC), width: 2),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.file(
-                    File(image.path),
-                    fit: BoxFit.contain,
-                    width: double.infinity,
-                  ),
-                ),
-              ),
-            ),
-
-            // Description
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Would you like to add text to your image story?',
-                style: TextStyle(color: Colors.white70, fontSize: 14),
-                textAlign: TextAlign.center,
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Text Input Field
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                constraints: const BoxConstraints(maxHeight: 120),
-                child: TextField(
-                  controller: textController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'Enter text (optional)...',
-                    hintStyle: const TextStyle(color: Colors.white54),
-
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFBB86FC),
-                        width: 2,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                  maxLines: 3,
-                  maxLength: 200,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Action Buttons
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, {'skip': false}),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFBB86FC),
-                        side: const BorderSide(color: Color(0xFFBB86FC)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text(
-                        'No Text',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, {'skip': false}),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFBB86FC),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      child: const Text(
-                        'Add Text',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Send Story Reply (runs in background)
   void _sendStoryReply({
     required StoryModel story,
@@ -3873,13 +3176,22 @@ class _Home1State extends State<Home1> {
         // Create chat ID (sorted UIDs for consistent chat room)
         final chatId = ChatService.chatIdFor(currentUser.uid, story.ownerId);
 
-        // Create story preview text (first 50 chars)
-        String storyPreview = '';
+        // Create a short, type-aware preview label for the reply bubble.
+        String storyPreview;
         if (story.isImage) {
-          storyPreview = story.textContent ?? 'Photo';
+          storyPreview = (story.textContent != null &&
+                  story.textContent!.trim().isNotEmpty)
+              ? story.textContent!.trim()
+              : 'Photo';
+        } else if (story.isVideo) {
+          storyPreview = (story.textContent != null &&
+                  story.textContent!.trim().isNotEmpty)
+              ? story.textContent!.trim()
+              : 'Video';
         } else {
-          storyPreview = story.content.length > 50
-              ? '${story.content.substring(0, 50)}...'
+          // Text story: preview is the text itself.
+          storyPreview = story.content.length > 60
+              ? '${story.content.substring(0, 60)}…'
               : story.content;
         }
 
@@ -3893,6 +3205,14 @@ class _Home1State extends State<Home1> {
             'storyContent': story.content,
             'storyPreview': storyPreview,
             'storyIsImage': story.isImage,
+            // New: type-aware fields so the chat can render text/video replies.
+            'storyMediaType': story.mediaType,
+            if (story.thumbnailUrl != null)
+              'storyThumbnailUrl': story.thumbnailUrl,
+            if (story.backgroundColor != null)
+              'storyBackgroundColor': story.backgroundColor,
+            if (story.textColor != null) 'storyTextColor': story.textColor,
+            if (story.fontFamily != null) 'storyFontFamily': story.fontFamily,
             'storyOwnerId': story.ownerId,
             'storyOwnerName': story.ownerName,
           },
@@ -4306,7 +3626,9 @@ class _Home1State extends State<Home1> {
                                         Text(
                                           song['year'] ?? '',
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(0.5),
+                                            color: Colors.white.withOpacity(
+                                              0.5,
+                                            ),
                                             fontSize: r(12),
                                           ),
                                         ),
@@ -4351,10 +3673,8 @@ class _Home1State extends State<Home1> {
                                   color: Colors.blue,
                                   size: 18,
                                 ),
-                                onPressed: () => showEditSongBottomSheet(
-                                  context,
-                                  song,
-                                ),
+                                onPressed: () =>
+                                    showEditSongBottomSheet(context, song),
                                 padding: const EdgeInsets.all(8),
                                 constraints: const BoxConstraints(),
                               ),
@@ -4537,6 +3857,14 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
   bool _isTimerPaused = false;
   bool _isLongPressing = false;
 
+  // Video playback for video stories
+  VideoPlayerController? _videoController;
+  bool _isVideoReady = false;
+  // Image preloading for image stories (timer waits until the image is ready).
+  bool _isImageReady = false;
+  // Auto-advance duration for text & image stories (ms). Video uses its own length.
+  static const double _staticStoryDurationMs = 5000;
+
   // Local helper for "time ago" labels inside the viewer
   String _formatTimeAgo(DateTime timestamp) {
     final now = DateTime.now();
@@ -4575,6 +3903,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
+    _setupCurrentStory();
     _startStoryTimer();
     _loadCurrentUserName();
 
@@ -4872,6 +4201,73 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
     }
   }
 
+  /// Prepares playback for the story at [_currentIndex]. Disposes any previous
+  /// video controller and, if the current story is a video, creates a new one.
+  void _setupCurrentStory() {
+    final oldController = _videoController;
+    _videoController = null;
+    _isVideoReady = false;
+    _isImageReady = false;
+    oldController?.dispose();
+
+    if (_currentIndex < 0 || _currentIndex >= widget.stories.length) return;
+    final story = widget.stories[_currentIndex];
+
+    // Video story: create + initialize a controller; timer waits for _isVideoReady.
+    if (story.isVideo) {
+      if (story.content.isEmpty) return;
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(story.content),
+      );
+      _videoController = controller;
+      controller
+          .initialize()
+          .then((_) {
+            if (!mounted || _videoController != controller) return;
+            controller.setLooping(false);
+            controller.play();
+            setState(() {
+              _isVideoReady = true;
+              _progress = 0.0;
+            });
+          })
+          .catchError((_) {
+            if (!mounted || _videoController != controller) return;
+            setState(() => _isVideoReady = false);
+          });
+      return;
+    }
+
+    // Image story: preload so the timer only starts once it's on screen.
+    if (story.isImage && story.content.isNotEmpty) {
+      bool stillCurrent() =>
+          mounted &&
+          _currentIndex >= 0 &&
+          _currentIndex < widget.stories.length &&
+          widget.stories[_currentIndex].id == story.id;
+      precacheImage(
+        NetworkImage(story.content),
+        context,
+        onError: (_, __) {
+          if (!stillCurrent()) return;
+          setState(() {
+            _isImageReady = true; // show error placeholder; don't stall forever
+            _progress = 0.0;
+          });
+        },
+      ).then((_) {
+        if (!stillCurrent()) return;
+        setState(() {
+          _isImageReady = true;
+          _progress = 0.0;
+        });
+      });
+      return;
+    }
+
+    // Text story: nothing to load (renders immediately).
+  }
+
   void _startStoryTimer() {
     _progress = 0.0;
     _isTimerPaused = false;
@@ -4880,9 +4276,35 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
       if (!mounted || _isTimerPaused) {
         return;
       }
+      final story =
+          (_currentIndex >= 0 && _currentIndex < widget.stories.length)
+          ? widget.stories[_currentIndex]
+          : null;
+
+      double next;
+      if (story != null && story.isVideo) {
+        // Video: progress follows playback position.
+        final controller = _videoController;
+        if (controller == null || !_isVideoReady) {
+          return; // wait until the video is ready before advancing
+        }
+        final durMs = controller.value.duration.inMilliseconds;
+        final posMs = controller.value.position.inMilliseconds;
+        if (durMs <= 0) return;
+        next = (posMs >= durMs - 60) ? 1.0 : (posMs / durMs);
+      } else if (story != null && story.isImage) {
+        // Image: wait until it has loaded before advancing.
+        if (!_isImageReady) return;
+        next = _progress + (50.0 / _staticStoryDurationMs);
+      } else {
+        // Text: fixed duration.
+        next = _progress + (50.0 / _staticStoryDurationMs);
+      }
+
       setState(() {
-        _progress += 0.02; // 50ms * 20 = 1000ms per story (5 seconds)
+        _progress = next.clamp(0.0, 1.0);
       });
+
       if (_progress >= 1.0 && mounted) {
         timer.cancel();
         _nextStory();
@@ -4896,6 +4318,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
         _isTimerPaused = true;
       });
     }
+    _videoController?.pause();
   }
 
   void _resumeTimer() {
@@ -4904,6 +4327,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
         _isTimerPaused = false;
       });
     }
+    if (_isVideoReady) _videoController?.play();
   }
 
   void _nextStory() {
@@ -4965,6 +4389,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
       _progress = 0.0;
       _isTimerPaused = false; // Reset pause state on page change
     });
+    _setupCurrentStory();
     _startStoryTimer();
     widget.onStoryView(widget.stories[index].id);
   }
@@ -4998,6 +4423,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
   @override
   void dispose() {
     _storyTimer?.cancel();
+    _videoController?.dispose();
     _pageController.dispose();
     _replyController.dispose();
     _replyFocusNode.dispose();
@@ -5027,7 +4453,7 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
         children: [
           // Story Content
           Positioned.fill(
-            bottom: isOwnStory ? 80 : 0, // Leave space for view count button
+            bottom: 0, // Story content fills the full screen
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTapUp: _onTapUp,
@@ -5110,13 +4536,6 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
             right: 12,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 6),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
-                ),
-              ),
               child: Row(
                 children: [
                   // User Avatar (tap to open profile)
@@ -5420,41 +4839,144 @@ class _InstagramStoryViewerState extends State<InstagramStoryViewer> {
   }
 
   Widget _buildStoryContent(StoryModel story) {
+    if (story.isVideo) {
+      return _buildVideoStoryContent(story);
+    }
+    if (story.isText || !story.isImage) {
+      return _buildTextStoryContent(story);
+    }
+    // Image story
+    final isActive =
+        _currentIndex >= 0 &&
+        _currentIndex < widget.stories.length &&
+        widget.stories[_currentIndex].id == story.id;
+    return SizedBox.expand(
+      child: ColoredBox(
+        color: Colors.black,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              story.content,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Center(
+                  child: Icon(Icons.image, color: Colors.white54, size: 60),
+                );
+              },
+            ),
+            if (isActive && !_isImageReady)
+              const Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVideoStoryContent(StoryModel story) {
+    final isActive =
+        _currentIndex >= 0 &&
+        _currentIndex < widget.stories.length &&
+        widget.stories[_currentIndex].id == story.id;
+    final controller = _videoController;
+
+    if (isActive && controller != null && _isVideoReady) {
+      return SizedBox.expand(
+        child: ColoredBox(
+          color: Colors.black,
+          child: ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) {
+              final vSize = controller.value.size;
+              final vw = vSize.width > 0 ? vSize.width : 9.0;
+              final vh = vSize.height > 0 ? vSize.height : 16.0;
+              return FittedBox(
+                fit: BoxFit.fitWidth,
+                clipBehavior: Clip.hardEdge,
+                child: SizedBox(
+                  width: vw,
+                  height: vh,
+                  child: VideoPlayer(controller),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // Off-screen or still initializing: thumbnail (+ spinner only when active).
+    return Container(
+      color: Colors.black,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (story.thumbnailUrl != null && story.thumbnailUrl!.isNotEmpty)
+            Image.network(
+              story.thumbnailUrl!,
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          if (isActive)
+            const Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextStoryContent(StoryModel story) {
+    final bg = story.backgroundColor != null
+        ? Color(story.backgroundColor!)
+        : null;
+    final textColor = story.textColor != null
+        ? Color(story.textColor!)
+        : Colors.white;
+    final baseStyle = TextStyle(
+      color: textColor,
+      fontSize: 30,
+      fontWeight: FontWeight.w600,
+      height: 1.3,
+    );
+    TextStyle textStyle;
+    if (story.fontFamily != null && story.fontFamily!.isNotEmpty) {
+      try {
+        textStyle = GoogleFonts.getFont(
+          story.fontFamily!,
+          textStyle: baseStyle,
+        );
+      } catch (_) {
+        textStyle = baseStyle;
+      }
+    } else {
+      textStyle = baseStyle;
+    }
+
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: Colors.black,
-      child: story.isImage
-          ? Stack(
-              fit: StackFit.expand,
-              children: [
-                Image.network(
-                  story.content,
-                  fit: BoxFit.contain,
-                  width: double.infinity,
-                  height: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Center(
-                      child: Icon(Icons.image, color: Colors.white54, size: 60),
-                    );
-                  },
-                ),
-              ],
-            )
-          : Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40),
-                child: Text(
-                  story.content,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
+      decoration: BoxDecoration(
+        color: bg,
+        gradient: bg == null
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [recntsColor, indigoColor],
+              )
+            : null,
+      ),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(32),
+      child: Text(story.content, style: textStyle, textAlign: TextAlign.center),
     );
   }
 }
@@ -5654,6 +5176,25 @@ class StoryModel {
   final List<String> viewers;
   final DateTime expiryTime;
 
+  // ── New story-creator fields (backward compatible) ──
+  /// 'text' | 'image' | 'video'. Derived from [isImage] for legacy docs.
+  final String mediaType;
+
+  /// ARGB int for styled text-story background (single color). Null = default gradient.
+  final int? backgroundColor;
+
+  /// ARGB int for styled text-story text color.
+  final int? textColor;
+
+  /// GoogleFonts family name for styled text stories.
+  final String? fontFamily;
+
+  /// Thumbnail image URL for video stories (shown in the stories tray).
+  final String? thumbnailUrl;
+
+  bool get isVideo => mediaType == 'video';
+  bool get isText => mediaType == 'text';
+
   StoryModel({
     required this.id,
     required this.username,
@@ -5666,22 +5207,34 @@ class StoryModel {
     required this.ownerName,
     required this.viewers,
     required this.expiryTime,
+    this.mediaType = 'image',
+    this.backgroundColor,
+    this.textColor,
+    this.fontFamily,
+    this.thumbnailUrl,
   });
 
   // Create from Firestore document
   factory StoryModel.fromFirestore(Map<String, dynamic> data, String id) {
+    final bool legacyIsImage = data['isImage'] ?? false;
     return StoryModel(
       id: id,
       username: data['username'] ?? '',
       content: data['content'] ?? '',
       textContent: data['textContent'],
-      isImage: data['isImage'] ?? false,
+      isImage: legacyIsImage,
       isLive: data['isLive'] ?? false,
       timestamp: (data['timestamp'] as Timestamp).toDate(),
       ownerId: data['ownerId'] ?? '',
       ownerName: data['ownerName'] ?? '',
       viewers: List<String>.from(data['viewers'] ?? []),
       expiryTime: (data['expiryTime'] as Timestamp).toDate(),
+      mediaType:
+          (data['mediaType'] as String?) ?? (legacyIsImage ? 'image' : 'text'),
+      backgroundColor: (data['backgroundColor'] as num?)?.toInt(),
+      textColor: (data['textColor'] as num?)?.toInt(),
+      fontFamily: data['fontFamily'] as String?,
+      thumbnailUrl: data['thumbnailUrl'] as String?,
     );
   }
 
@@ -5698,6 +5251,11 @@ class StoryModel {
       'ownerName': ownerName,
       'viewers': viewers,
       'expiryTime': Timestamp.fromDate(expiryTime),
+      'mediaType': mediaType,
+      if (backgroundColor != null) 'backgroundColor': backgroundColor,
+      if (textColor != null) 'textColor': textColor,
+      if (fontFamily != null) 'fontFamily': fontFamily,
+      if (thumbnailUrl != null) 'thumbnailUrl': thumbnailUrl,
     };
   }
 
@@ -5713,6 +5271,11 @@ class StoryModel {
     'ownerName': ownerName,
     'viewers': viewers,
     'expiryTime': expiryTime.millisecondsSinceEpoch,
+    'mediaType': mediaType,
+    'backgroundColor': backgroundColor,
+    'textColor': textColor,
+    'fontFamily': fontFamily,
+    'thumbnailUrl': thumbnailUrl,
   };
 
   factory StoryModel.fromCacheJson(Map<String, dynamic> data) {
@@ -5732,6 +5295,13 @@ class StoryModel {
       expiryTime: DateTime.fromMillisecondsSinceEpoch(
         (data['expiryTime'] as num?)?.toInt() ?? 0,
       ),
+      mediaType:
+          (data['mediaType'] as String?) ??
+          ((data['isImage'] as bool? ?? false) ? 'image' : 'text'),
+      backgroundColor: (data['backgroundColor'] as num?)?.toInt(),
+      textColor: (data['textColor'] as num?)?.toInt(),
+      fontFamily: data['fontFamily'] as String?,
+      thumbnailUrl: data['thumbnailUrl'] as String?,
     );
   }
 
@@ -5763,327 +5333,6 @@ class TabsModel {
     required this.labelColor,
     required this.bgColor,
   });
-}
-
-// WhatsApp-style Story Images Preview Screen
-class StoryImagesPreviewScreen extends StatefulWidget {
-  final List<XFile> images;
-  final Future<void> Function(List<Map<String, dynamic>> imagesData) onUpload;
-
-  const StoryImagesPreviewScreen({
-    super.key,
-    required this.images,
-    required this.onUpload,
-  });
-
-  @override
-  State<StoryImagesPreviewScreen> createState() =>
-      _StoryImagesPreviewScreenState();
-}
-
-class _StoryImagesPreviewScreenState extends State<StoryImagesPreviewScreen> {
-  late PageController _pageController;
-  int _currentPage = 0;
-  late List<TextEditingController> _textControllers;
-  bool _isUploading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageController = PageController();
-    _textControllers = List.generate(
-      widget.images.length,
-      (index) => TextEditingController(),
-    );
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    for (var controller in _textControllers) {
-      controller.dispose();
-    }
-    super.dispose();
-  }
-
-  void _removeImage(int index) {
-    setState(() {
-      widget.images.removeAt(index);
-      _textControllers[index].dispose();
-      _textControllers.removeAt(index);
-
-      if (widget.images.isEmpty) {
-        Navigator.pop(context);
-        return;
-      }
-
-      if (_currentPage >= widget.images.length) {
-        _currentPage = widget.images.length - 1;
-        _pageController.jumpToPage(_currentPage);
-      }
-    });
-  }
-
-  Future<void> _uploadStories() async {
-    setState(() {
-      _isUploading = true;
-    });
-
-    try {
-      List<Map<String, dynamic>> imagesData = [];
-      for (int i = 0; i < widget.images.length; i++) {
-        imagesData.add({
-          'image': widget.images[i],
-          'text': _textControllers[i].text.trim(),
-        });
-      }
-
-      await widget.onUpload(imagesData);
-      if (mounted) {
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      Fluttertoast.showToast(msg: "Error: $e");
-      setState(() {
-        _isUploading = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomSafePadding = mediaQuery.padding.bottom;
-    final isSmallHeight = mediaQuery.size.height < 700;
-
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // Main Image Viewer with PageView
-          PageView.builder(
-            controller: _pageController,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemCount: widget.images.length,
-            itemBuilder: (context, index) {
-              return Stack(
-                fit: StackFit.expand,
-                children: [
-                  // Image
-                  Image.file(
-                    File(widget.images[index].path),
-                    fit: BoxFit.contain,
-                  ),
-
-                  // Caption bar (WhatsApp-style: slim bar at bottom)
-                  Positioned(
-                    bottom: (isSmallHeight ? 100.0 : 120.0) + bottomSafePadding,
-                    left: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.55),
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
-                          width: 1,
-                        ),
-                      ),
-                      child: TextField(
-                        controller: _textControllers[index],
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Add a caption...',
-                          hintStyle: TextStyle(
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 0,
-                            vertical: 4,
-                          ),
-                          isDense: true,
-                          counterText: '',
-                        ),
-                        maxLines: 2,
-                        maxLength: 200,
-                        textCapitalization: TextCapitalization.sentences,
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
-
-          // Top Header
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Close Button
-                  IconButton(
-                    icon: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-
-                  // Page Indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '${_currentPage + 1}/${widget.images.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-
-                  // Delete Current Image
-                  IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.red, size: 28),
-                    onPressed: () => _removeImage(_currentPage),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Bottom Thumbnails Strip (WhatsApp style)
-          Positioned(
-            bottom: 20 + bottomSafePadding,
-            left: 0,
-            right: 0,
-            child: Column(
-              children: [
-                // Thumbnails
-                SizedBox(
-                  height: 60,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: widget.images.length,
-                    itemBuilder: (context, index) {
-                      final isSelected = index == _currentPage;
-                      return GestureDetector(
-                        onTap: () {
-                          _pageController.animateToPage(
-                            index,
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                          );
-                        },
-                        child: Container(
-                          width: 50,
-                          height: 50,
-                          margin: const EdgeInsets.only(right: 8),
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: isSelected
-                                  ? const Color(0xFFBB86FC)
-                                  : Colors.white.withOpacity(0.5),
-                              width: isSelected ? 3 : 2,
-                            ),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: Image.file(
-                              File(widget.images[index].path),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-
-                // Upload Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: appGradient,
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                    child: ElevatedButton.icon(
-                      onPressed: _isUploading ? null : _uploadStories,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        disabledBackgroundColor: Colors.transparent,
-                        minimumSize: const Size(double.infinity, 54),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                      ),
-                      icon: _isUploading
-                          ? const SizedBox(
-                              height: 22,
-                              width: 22,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.cloud_upload_rounded,
-                              color: Colors.white,
-                            ),
-                      label: Text(
-                        _isUploading
-                            ? 'Uploading...'
-                            : 'Upload ${widget.images.length} ${widget.images.length > 1 ? 'Stories' : 'Story'}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // All Songs Screen with Search
