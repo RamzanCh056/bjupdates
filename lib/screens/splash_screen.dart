@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-import '../notification_services/notification_services.dart';
 import '../services/navigation_service.dart';
 import 'auth_screen/login_screen.dart';
 import 'bottom_nav_bar.dart';
@@ -15,7 +13,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  // NotificationServices notificationServices = NotificationServices();
   @override
   void initState() {
     super.initState();
