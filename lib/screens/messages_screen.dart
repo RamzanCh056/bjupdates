@@ -95,11 +95,13 @@ class _MessagesScreenState extends State<MessagesScreen> {
     String? photo,
     String? chatId,
   }) async {
-    final id = chatId ?? await ChatService.openOrCreateChat(
-      peerUid: peerId,
-      peerName: name,
-      peerPhoto: photo,
-    );
+    final id =
+        chatId ??
+        await ChatService.openOrCreateChat(
+          peerUid: peerId,
+          peerName: name,
+          peerPhoto: photo,
+        );
     if (!mounted) return;
     final deletedPeer = await Navigator.push<String>(
       context,
@@ -130,7 +132,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.8))),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -198,7 +203,11 @@ class _MessagesScreenState extends State<MessagesScreen> {
         centerTitle: true,
         title: const Text(
           'Messages',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 20),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+            fontSize: 20,
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
@@ -213,15 +222,25 @@ class _MessagesScreenState extends State<MessagesScreen> {
               decoration: BoxDecoration(
                 color: darkBackgroundPrimary,
                 borderRadius: BorderRadius.circular(25),
-                border: Border.all(color: _chatAccent.withValues(alpha: 0.3), width: 1.5),
+                border: Border.all(
+                  color: _chatAccent.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
               ),
               child: TextField(
                 controller: _searchController,
                 style: const TextStyle(color: Colors.white, fontSize: 15),
                 decoration: InputDecoration(
                   hintText: 'Search or start new chat',
-                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 15),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white70, size: 20),
+                  hintStyle: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 15,
+                  ),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: Colors.white70,
+                    size: 20,
+                  ),
                   border: InputBorder.none,
                   contentPadding: const EdgeInsets.symmetric(vertical: 15),
                 ),
@@ -243,7 +262,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
       return Center(
         child: Text(
           'No users match your search',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 15),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 15,
+          ),
         ),
       );
     }
@@ -260,7 +282,8 @@ class _MessagesScreenState extends State<MessagesScreen> {
           preview: 'Tap to start conversation',
           timestamp: null,
           isUnread: false,
-          onTap: () => _openChat(peerId: user['id'] as String, name: name, photo: photo),
+          onTap: () =>
+              _openChat(peerId: user['id'] as String, name: name, photo: photo),
         );
       },
     );
@@ -268,7 +291,9 @@ class _MessagesScreenState extends State<MessagesScreen> {
 
   Widget _buildInboxList(String? uid) {
     if (uid == null) {
-      return const Center(child: Text('Please sign in', style: TextStyle(color: Colors.white70)));
+      return const Center(
+        child: Text('Please sign in', style: TextStyle(color: Colors.white70)),
+      );
     }
     return StreamBuilder<List<ChatSummary>>(
       stream: ChatService.watchInbox(uid: uid),
@@ -291,7 +316,10 @@ class _MessagesScreenState extends State<MessagesScreen> {
           return Center(
             child: Text(
               'No conversations yet',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 15),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 15,
+              ),
             ),
           );
         }
@@ -399,7 +427,11 @@ class _ConversationListItem extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: () => openUserProfile(context, peerId),
-              child: _buildProfileAvatar(profileImage: profileImage, initial: initial, radius: 28),
+              child: _buildProfileAvatar(
+                profileImage: profileImage,
+                initial: initial,
+                radius: 28,
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -414,7 +446,9 @@ class _ConversationListItem extends StatelessWidget {
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 17,
-                            fontWeight: isUnread ? FontWeight.w700 : FontWeight.w400,
+                            fontWeight: isUnread
+                                ? FontWeight.w700
+                                : FontWeight.w400,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -433,9 +467,13 @@ class _ConversationListItem extends StatelessWidget {
                   Text(
                     preview,
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: isUnread ? 0.9 : 0.6),
+                      color: Colors.white.withValues(
+                        alpha: isUnread ? 0.9 : 0.6,
+                      ),
                       fontSize: 14,
-                      fontWeight: isUnread ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isUnread
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -456,7 +494,11 @@ class _ConversationListItem extends StatelessWidget {
             if (onDelete != null)
               PopupMenuButton<String>(
                 padding: EdgeInsets.zero,
-                icon: Icon(Icons.more_vert, color: Colors.white.withValues(alpha: 0.6), size: 22),
+                icon: Icon(
+                  Icons.more_vert,
+                  color: Colors.white.withValues(alpha: 0.6),
+                  size: 22,
+                ),
                 color: darkAppBarBackground,
                 onSelected: (value) {
                   if (value == 'delete') onDelete!();
@@ -468,7 +510,10 @@ class _ConversationListItem extends StatelessWidget {
                       children: [
                         Icon(Icons.delete_outline, color: Colors.red, size: 20),
                         SizedBox(width: 12),
-                        Text('Delete chat', style: TextStyle(color: Colors.red)),
+                        Text(
+                          'Delete chat',
+                          style: TextStyle(color: Colors.red),
+                        ),
                       ],
                     ),
                   ),
@@ -517,7 +562,8 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    chatId = widget.chatId ?? ChatService.chatIdFor(currentUser.uid, widget.peerUid);
+    chatId =
+        widget.chatId ?? ChatService.chatIdFor(currentUser.uid, widget.peerUid);
     _messageController.addListener(_onMessageTextChanged);
     _scrollController.addListener(_onScroll);
     ChatService.markThreadRead(chatId);
@@ -548,7 +594,10 @@ class _ChatScreenState extends State<ChatScreen> {
     if (first == null) return;
     setState(() => _loadingOlder = true);
     try {
-      final older = await ChatService.loadOlderMessages(chatId: chatId, before: first);
+      final older = await ChatService.loadOlderMessages(
+        chatId: chatId,
+        before: first,
+      );
       if (mounted && older.isNotEmpty) {
         setState(() => _olderMessages.insertAll(0, older));
       }
@@ -610,7 +659,10 @@ class _ChatScreenState extends State<ChatScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.white.withOpacity(0.8))),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.white.withOpacity(0.8)),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -681,7 +733,8 @@ class _ChatScreenState extends State<ChatScreen> {
             alignment: isRight ? Alignment.centerRight : Alignment.centerLeft,
             child: Container(
               margin: const EdgeInsets.only(bottom: 14),
-              width: MediaQuery.of(context).size.width * (isRight ? 0.62 : 0.52),
+              width:
+                  MediaQuery.of(context).size.width * (isRight ? 0.62 : 0.52),
               height: 48,
               decoration: BoxDecoration(
                 color: _chatSurface,
@@ -730,7 +783,9 @@ class _ChatScreenState extends State<ChatScreen> {
       child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Container(
               constraints: BoxConstraints(maxWidth: maxW),
@@ -739,7 +794,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 gradient: isMe ? _chatGradient : null,
                 color: isMe ? null : _chatSurface,
                 borderRadius: borderRadius,
-                border: isMe ? null : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: isMe
+                    ? null
+                    : Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 boxShadow: [
                   BoxShadow(
                     color: isMe
@@ -786,6 +843,131 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  // Resolve the story reply's media type (backward compatible with old replies
+  // that only sent storyIsImage).
+  String _storyReplyMediaType(Map<String, dynamic> data) {
+    final t = data['storyMediaType']?.toString();
+    if (t != null && t.isNotEmpty) return t;
+    if (data['storyIsImage'] == true) return 'image';
+    // Legacy replies (no storyMediaType): infer from the content URL. A text
+    // story's content is plain text; a media story's content is an http URL.
+    final c = (data['storyContent'] ?? '').toString().toLowerCase();
+    if (c.startsWith('http')) {
+      if (c.contains('.mp4') || c.contains('.mov') || c.contains('video')) {
+        return 'video';
+      }
+      if (c.contains('.jpg') ||
+          c.contains('.jpeg') ||
+          c.contains('.png') ||
+          c.contains('.webp') ||
+          c.contains('.gif')) {
+        return 'image';
+      }
+      // A media URL with isImage=false is most likely a video story.
+      return 'video';
+    }
+    return 'text';
+  }
+
+  // A friendly preview label that never shows a raw URL.
+  String _storyReplyPreviewLabel(Map<String, dynamic> data) {
+    final raw = (data['storyPreview'] ?? '').toString().trim();
+    final looksLikeUrl =
+        raw.startsWith('http://') || raw.startsWith('https://');
+    if (raw.isEmpty || looksLikeUrl) {
+      switch (_storyReplyMediaType(data)) {
+        case 'video':
+          return 'Video';
+        case 'image':
+          return 'Photo';
+        default:
+          return 'Story';
+      }
+    }
+    return raw;
+  }
+
+  IconData _storyReplyTypeIcon(Map<String, dynamic> data) {
+    switch (_storyReplyMediaType(data)) {
+      case 'video':
+        return Icons.videocam_rounded;
+      case 'image':
+        return Icons.image_rounded;
+      default:
+        return Icons.format_quote_rounded;
+    }
+  }
+
+  // Renders the 54x54 story thumbnail for a reply bubble: real image for photo
+  // stories, a poster + play badge for video, and a colored mini-card for text.
+  Widget _storyReplyThumb(Map<String, dynamic> data) {
+    final type = _storyReplyMediaType(data);
+    final content = data['storyContent']?.toString() ?? '';
+
+    if (type == 'image') {
+      return Image.network(
+        content,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Container(
+          color: Colors.black26,
+          child: const Icon(
+            Icons.image_rounded,
+            color: Colors.white54,
+            size: 22,
+          ),
+        ),
+      );
+    }
+
+    if (type == 'video') {
+      final thumb = data['storyThumbnailUrl']?.toString() ?? '';
+      return Stack(
+        fit: StackFit.expand,
+        children: [
+          if (thumb.isNotEmpty)
+            Image.network(
+              thumb,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(color: Colors.black38),
+            )
+          else
+            Container(color: Colors.black38),
+          Center(
+            child: Icon(
+              Icons.play_circle_fill_rounded,
+              color: Colors.white.withValues(alpha: 0.92),
+              size: 24,
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Text story: mini card using the story's own background + text color.
+    final bgInt = (data['storyBackgroundColor'] as num?)?.toInt();
+    final tcInt = (data['storyTextColor'] as num?)?.toInt();
+    final bg = bgInt != null
+        ? Color(bgInt)
+        : _chatAccent.withValues(alpha: 0.35);
+    final tc = tcInt != null ? Color(tcInt) : Colors.white;
+    final preview = _storyReplyPreviewLabel(data);
+    final label = preview.isEmpty
+        ? 'T'
+        : (preview.length > 3 ? preview.substring(0, 3) : preview);
+    return Container(
+      color: bg,
+      alignment: Alignment.center,
+      padding: const EdgeInsets.all(3),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.clip,
+        textAlign: TextAlign.center,
+        style: TextStyle(color: tc, fontWeight: FontWeight.w700, fontSize: 15),
+      ),
+    );
+  }
+
   Widget _buildStoryReplyBubble({
     required bool isMe,
     required Map<String, dynamic> data,
@@ -802,11 +984,17 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     return Padding(
-      padding: EdgeInsets.only(bottom: 10, left: isMe ? 40 : 0, right: isMe ? 0 : 28),
+      padding: EdgeInsets.only(
+        bottom: 10,
+        left: isMe ? 40 : 0,
+        right: isMe ? 0 : 28,
+      ),
       child: Align(
         alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
         child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment: isMe
+              ? CrossAxisAlignment.end
+              : CrossAxisAlignment.start,
           children: [
             Container(
               constraints: BoxConstraints(maxWidth: maxW),
@@ -814,7 +1002,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 gradient: isMe ? _chatGradient : null,
                 color: isMe ? null : _chatSurface,
                 borderRadius: borderRadius,
-                border: isMe ? null : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                border: isMe
+                    ? null
+                    : Border.all(color: Colors.white.withValues(alpha: 0.08)),
                 boxShadow: [
                   BoxShadow(
                     color: _chatAccent.withValues(alpha: isMe ? 0.25 : 0.08),
@@ -837,8 +1027,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.auto_stories_rounded,
-                            size: 14, color: Colors.white.withValues(alpha: 0.75)),
+                        Icon(
+                          Icons.auto_stories_rounded,
+                          size: 14,
+                          color: Colors.white.withValues(alpha: 0.75),
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
@@ -859,49 +1052,44 @@ class _ChatScreenState extends State<ChatScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
-                          width: 48,
-                          height: 48,
+                          width: 54,
+                          height: 54,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2),
+                            ),
                           ),
                           clipBehavior: Clip.antiAlias,
-                          child: data['storyIsImage'] == true
-                              ? Image.network(
-                                  data['storyContent']?.toString() ?? '',
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.image_rounded,
-                                    color: Colors.white54,
-                                    size: 22,
-                                  ),
-                                )
-                              : Center(
-                                  child: Text(
-                                    ((data['storyPreview'] ?? 'S') as String).isNotEmpty
-                                        ? ((data['storyPreview'] ?? 'S') as String)[0].toUpperCase()
-                                        : 'S',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
+                          child: _storyReplyThumb(data),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                data['storyPreview']?.toString() ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.65),
-                                  fontSize: 11,
-                                ),
+                              Row(
+                                children: [
+                                  Icon(
+                                    _storyReplyTypeIcon(data),
+                                    size: 12,
+                                    color: Colors.white.withValues(alpha: 0.6),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      _storyReplyPreviewLabel(data),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.65,
+                                        ),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                               const SizedBox(height: 5),
                               Text(
@@ -936,7 +1124,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   if (isMe) ...[
                     const SizedBox(width: 4),
-                    _DeliveryIcon(status: ChatMessageStatus.sent, pending: pending),
+                    _DeliveryIcon(
+                      status: ChatMessageStatus.sent,
+                      pending: pending,
+                    ),
                   ],
                 ],
               ),
@@ -967,8 +1158,11 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 border: Border.all(color: _chatAccent.withValues(alpha: 0.25)),
               ),
-              child: Icon(Icons.chat_bubble_outline_rounded,
-                  size: 36, color: _chatAccentLight.withValues(alpha: 0.9)),
+              child: Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 36,
+                color: _chatAccentLight.withValues(alpha: 0.9),
+              ),
             ),
             const SizedBox(height: 22),
             const Text(
@@ -998,8 +1192,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final peerInitial =
-        widget.peerName.isNotEmpty ? widget.peerName[0].toUpperCase() : '?';
+    final peerInitial = widget.peerName.isNotEmpty
+        ? widget.peerName[0].toUpperCase()
+        : '?';
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -1048,7 +1243,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             curve: Curves.easeOutCubic,
                           );
                         }
-                        if (mounted) setState(() => _shouldScrollToBottomOnUpdate = false);
+                        if (mounted)
+                          setState(() => _shouldScrollToBottomOnUpdate = false);
                       });
                     }
 
@@ -1114,13 +1310,9 @@ class _ChatListEntry {
   final String? dateLabel;
   final ChatMessage? message;
 
-  _ChatListEntry.date(this.dateLabel)
-      : isDate = true,
-        message = null;
+  _ChatListEntry.date(this.dateLabel) : isDate = true, message = null;
 
-  _ChatListEntry.message(this.message)
-      : isDate = false,
-        dateLabel = null;
+  _ChatListEntry.message(this.message) : isDate = false, dateLabel = null;
 }
 
 class _ChatAmbientBackground extends StatelessWidget {
@@ -1140,7 +1332,10 @@ class _ChatAmbientBackground extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
-                colors: [_chatAccent.withValues(alpha: 0.12), Colors.transparent],
+                colors: [
+                  _chatAccent.withValues(alpha: 0.12),
+                  Colors.transparent,
+                ],
               ),
             ),
           ),
@@ -1154,7 +1349,10 @@ class _ChatAmbientBackground extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(
-                colors: [_chatAccentDeep.withValues(alpha: 0.08), Colors.transparent],
+                colors: [
+                  _chatAccentDeep.withValues(alpha: 0.08),
+                  Colors.transparent,
+                ],
               ),
             ),
           ),
@@ -1201,8 +1399,11 @@ class _PremiumChatHeader extends StatelessWidget {
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 20),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
               GestureDetector(
@@ -1252,10 +1453,14 @@ class _PremiumChatHeader extends StatelessWidget {
                 ),
               ),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_horiz_rounded,
-                    color: Colors.white.withValues(alpha: 0.85)),
+                icon: Icon(
+                  Icons.more_horiz_rounded,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
                 color: _chatSurface,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
                 onSelected: (v) {
                   if (v == 'delete') onDelete();
                 },
@@ -1264,9 +1469,16 @@ class _PremiumChatHeader extends StatelessWidget {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                        Icon(
+                          Icons.delete_outline_rounded,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
                         SizedBox(width: 12),
-                        Text('Delete chat', style: TextStyle(color: Colors.redAccent)),
+                        Text(
+                          'Delete chat',
+                          style: TextStyle(color: Colors.redAccent),
+                        ),
                       ],
                     ),
                   ),
@@ -1321,15 +1533,24 @@ class _DeliveryIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (pending) {
-      return Icon(Icons.schedule_rounded,
-          size: 13, color: Colors.white.withValues(alpha: 0.35));
+      return Icon(
+        Icons.schedule_rounded,
+        size: 13,
+        color: Colors.white.withValues(alpha: 0.35),
+      );
     }
     if (status == ChatMessageStatus.read) {
-      return Icon(Icons.done_all_rounded,
-          size: 14, color: _chatAccentLight.withValues(alpha: 0.95));
+      return Icon(
+        Icons.done_all_rounded,
+        size: 14,
+        color: _chatAccentLight.withValues(alpha: 0.95),
+      );
     }
-    return Icon(Icons.check_rounded,
-        size: 13, color: Colors.white.withValues(alpha: 0.4));
+    return Icon(
+      Icons.check_rounded,
+      size: 13,
+      color: Colors.white.withValues(alpha: 0.4),
+    );
   }
 }
 
@@ -1342,7 +1563,8 @@ class _TypingBar extends StatefulWidget {
   State<_TypingBar> createState() => _TypingBarState();
 }
 
-class _TypingBarState extends State<_TypingBar> with SingleTickerProviderStateMixin {
+class _TypingBarState extends State<_TypingBar>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -1500,7 +1722,9 @@ class _PremiumComposer extends StatelessWidget {
                       shape: BoxShape.circle,
                       border: hasText
                           ? null
-                          : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          : Border.all(
+                              color: Colors.white.withValues(alpha: 0.08),
+                            ),
                       boxShadow: hasText
                           ? [
                               BoxShadow(

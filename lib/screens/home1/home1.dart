@@ -3176,13 +3176,22 @@ class _Home1State extends State<Home1> {
         // Create chat ID (sorted UIDs for consistent chat room)
         final chatId = ChatService.chatIdFor(currentUser.uid, story.ownerId);
 
-        // Create story preview text (first 50 chars)
-        String storyPreview = '';
+        // Create a short, type-aware preview label for the reply bubble.
+        String storyPreview;
         if (story.isImage) {
-          storyPreview = story.textContent ?? 'Photo';
+          storyPreview = (story.textContent != null &&
+                  story.textContent!.trim().isNotEmpty)
+              ? story.textContent!.trim()
+              : 'Photo';
+        } else if (story.isVideo) {
+          storyPreview = (story.textContent != null &&
+                  story.textContent!.trim().isNotEmpty)
+              ? story.textContent!.trim()
+              : 'Video';
         } else {
-          storyPreview = story.content.length > 50
-              ? '${story.content.substring(0, 50)}...'
+          // Text story: preview is the text itself.
+          storyPreview = story.content.length > 60
+              ? '${story.content.substring(0, 60)}…'
               : story.content;
         }
 
@@ -3196,6 +3205,14 @@ class _Home1State extends State<Home1> {
             'storyContent': story.content,
             'storyPreview': storyPreview,
             'storyIsImage': story.isImage,
+            // New: type-aware fields so the chat can render text/video replies.
+            'storyMediaType': story.mediaType,
+            if (story.thumbnailUrl != null)
+              'storyThumbnailUrl': story.thumbnailUrl,
+            if (story.backgroundColor != null)
+              'storyBackgroundColor': story.backgroundColor,
+            if (story.textColor != null) 'storyTextColor': story.textColor,
+            if (story.fontFamily != null) 'storyFontFamily': story.fontFamily,
             'storyOwnerId': story.ownerId,
             'storyOwnerName': story.ownerName,
           },
