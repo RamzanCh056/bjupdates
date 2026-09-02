@@ -544,6 +544,15 @@ class _ReelIntermediatePreviewScreenState
     if (_compressingForPreview) return;
     _clampTrimToDuration();
 
+    // Stop playback before handing the file to the hardware encoder — running
+    // the preview's video decoder and ffmpeg's hardware encoder at the same
+    // time is a common cause of intermittent MediaCodec/VideoToolbox failures.
+    _pauseMusicDelay?.cancel();
+    _pauseMusicDelay = null;
+    _controller?.pause();
+    _musicPlayer?.pause();
+    _isPaused = true;
+
     setState(() {
       _compressingForPreview = true;
       _compressProgress = 0;
@@ -2354,7 +2363,8 @@ class _ReelIntermediatePreviewScreenState
                           child: CircularProgressIndicator(
                             strokeWidth: 3,
                             color: purpleAccent,
-                            value: _compressProgress > 0 && _compressProgress < 1
+                            value:
+                                _compressProgress > 0 && _compressProgress < 1
                                 ? _compressProgress
                                 : null,
                           ),
