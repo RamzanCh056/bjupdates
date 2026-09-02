@@ -855,6 +855,11 @@ class _ReelCameraCaptureScreenState extends State<ReelCameraCaptureScreen>
       return Container(color: Colors.black);
     }
     final size = MediaQuery.sizeOf(context);
+    // `aspectRatio` is reported in the sensor's native (landscape) orientation,
+    // i.e. width/height with width > height. On a portrait screen the preview's
+    // true width/height ratio is the inverse, so scale height by `ar`, not `1/ar`
+    // — dividing here stretched the image (see the official `camera` package
+    // example, which uses `AspectRatio(aspectRatio: 1 / controller.value.aspectRatio, ...)`).
     final ar = c.value.aspectRatio;
     return ClipRect(
       child: OverflowBox(
@@ -863,7 +868,7 @@ class _ReelCameraCaptureScreenState extends State<ReelCameraCaptureScreen>
           fit: BoxFit.cover,
           child: SizedBox(
             width: size.width,
-            height: size.width / ar,
+            height: size.width * ar,
             child: CameraPreview(c),
           ),
         ),

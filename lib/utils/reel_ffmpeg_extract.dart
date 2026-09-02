@@ -115,6 +115,15 @@ Future<File?> compressReelVideoForPreview({
     (session) async {
       final rc = await session.getReturnCode();
       final ok = ReturnCode.isSuccess(rc);
+      if (!ok) {
+        final failStack = await session.getFailStackTrace();
+        final logs = await session.getAllLogsAsString();
+        // ignore: avoid_print
+        print(
+          'compressReelVideoForPreview: ffmpeg failed rc=$rc '
+          'stack=$failStack logs=$logs',
+        );
+      }
       if (!completer.isCompleted) completer.complete(ok);
     },
     null,
