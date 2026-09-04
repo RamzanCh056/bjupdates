@@ -9,6 +9,8 @@ def keystoreProperties = new Properties()
 def keystorePropertiesFile = rootProject.file('key.properties')
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+} else {
+    logger.warn("android/key.properties is missing. Release bundles cannot be signed for Play.")
 }
 
 
@@ -61,6 +63,12 @@ android {
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    // UAST/lint analysis was compiling a huge Kotlin method and crashing JBR 17.0.9 C1.
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
     }
 }
 
