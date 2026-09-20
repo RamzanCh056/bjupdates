@@ -4,6 +4,9 @@ import '../../models/musician_career_models.dart';
 import '../../services/musician_career_service.dart';
 import '../../utils/color.dart';
 import 'musician_form_screen.dart';
+import 'musician_gigs_screen.dart';
+import 'musician_payments_screen.dart';
+import 'musician_documents_screen.dart';
 import 'musician_register_screen.dart';
 
 /// Entry screen for the Musician-Career feature.
@@ -144,6 +147,9 @@ class _MusicianHubScreenState extends State<MusicianHubScreen> {
     return Column(
       children: [
         _profileHeader(m),
+        _gigsShortcut(),
+        _paymentsShortcut(),
+        _documentsShortcut(),
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
           child: Row(
@@ -176,6 +182,120 @@ class _MusicianHubScreenState extends State<MusicianHubScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _moduleShortcut({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    double topPad = 10,
+  }) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, topPad, 16, 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: onTap,
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: indigoColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(icon, color: purpleAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(label,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700)),
+                ),
+                Icon(Icons.chevron_right,
+                    color: Colors.white.withValues(alpha: 0.4)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _documentsShortcut() => _moduleShortcut(
+        icon: Icons.folder_copy,
+        label: 'Documents',
+        topPad: 8,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MusicianDocumentsScreen()),
+        ),
+      );
+
+  Widget _paymentsShortcut() => _moduleShortcut(
+        icon: Icons.account_balance_wallet,
+        label: 'Payments',
+        topPad: 8,
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const MusicianPaymentsScreen()),
+        ),
+      );
+
+  Widget _gigsShortcut() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const MusicianGigsScreen()),
+          ),
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: indigoColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: const Icon(Icons.event_available,
+                      color: purpleAccent, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text('My gigs',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700)),
+                ),
+                Icon(Icons.chevron_right,
+                    color: Colors.white.withValues(alpha: 0.4)),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
