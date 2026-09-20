@@ -22,6 +22,7 @@ import 'new_reels.dart';
 import 'profile_photos_feed_screen.dart';
 import '../widgets/profile/discover_people_section.dart';
 import '../widgets/profile/professional_dashboard_card.dart';
+import '../widgets/musician/musician_tools_card.dart';
 
 
 class ProfileScreen extends StatefulWidget {
@@ -1001,6 +1002,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                   ),
                   const SizedBox(height: 16),
                   ProfessionalDashboardCard(userId: _profileUserId),
+                  const MusicianToolsCard(),
                   const DiscoverPeopleSection(),
                 ],
       ],
