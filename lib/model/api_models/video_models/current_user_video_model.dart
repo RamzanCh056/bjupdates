@@ -1,6 +1,4 @@
 
-import 'video_comments_model.dart';
-
 class CurrentUserVideoModelFields {
   static const String videoId = 'id';
   static const String userId = 'userId';

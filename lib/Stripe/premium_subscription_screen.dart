@@ -1,18 +1,13 @@
-import 'package:beatjerky/notification_services/build_notification_widget.dart';
-import 'package:beatjerky/screens/premium_plans/membership_history_screen.dart';
 import 'package:beatjerky/screens/premium_plans/premium_widget/premium_plan_card.dart';
-import 'package:beatjerky/screens/premium_plans/services/premium_plan_services.dart';
-import 'package:beatjerky/stripe_payment/stripe_payment.dart';
 import 'package:beatjerky/utils/color.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_stripe/flutter_stripe.dart' as StripePkg;
 
 const Color _premiumPurple = Color(0xFF9B42F5);
 const Color _premiumPurpleLight = Color(0xFFB366FF);
 const Color _surfaceBg = darkBackgroundPrimary;
-const Color _cardBg = darkBackgroundPrimary;
+// const Color _cardBg = darkBackgroundPrimary;
 const Color _textMuted = Color(0xFFB0B0B0);
 
 class PremiumSubscriptionScreen extends StatefulWidget {
@@ -37,12 +32,13 @@ class _PremiumSubscriptionScreenState extends State<PremiumSubscriptionScreen> {
   bool _isLoading = true;
   bool _isSubscribing = false;
   Map<String, dynamic>? _userData;
+  get userData =>_userData;
   String? _subscriptionStatus;
   bool _hasTrial = false;
   int _remainingTrialDays = 0;
   bool _isTrialExpired = false;
   DateTime? _trialEndDate;
-  bool _hasShownExpiredDialog = false; // Flag to prevent multiple dialogs
+  // bool _hasShownExpiredDialog = false; // Flag to prevent multiple dialogs
 
   @override
   void initState() {
@@ -378,12 +374,12 @@ class _PremiumSubscriptionScreenState extends State<PremiumSubscriptionScreen> {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  String _getButtonText() {
-    if (_subscriptionStatus == 'paid') return 'Manage Subscription';
-    if (_hasTrial) return 'Subscribe Now';
-    if (_isTrialExpired) return 'Renew Subscription';
-    return 'Start 7-Day Free Trial';
-  }
+  // String _getButtonText() {
+  //   if (_subscriptionStatus == 'paid') return 'Manage Subscription';
+  //   if (_hasTrial) return 'Subscribe Now';
+  //   if (_isTrialExpired) return 'Renew Subscription';
+  //   return 'Start 7-Day Free Trial';
+  // }
 
   @override
   Widget build(BuildContext context) {

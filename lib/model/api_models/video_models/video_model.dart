@@ -1,8 +1,6 @@
 
 import 'package:beatjerky/model/api_models/video_models/video_user_model.dart';
 
-import 'video_comments_model.dart';
-
 class VideoModelFields{
   static const String videoId='id';
   static const String userId='userId';

@@ -1,3 +1,5 @@
+// ignore_for_file: unused_field
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -88,7 +90,7 @@ class _PaymentPopupState extends State<PaymentPopup> {
             if (response.statusCode == 500) {
               // Check if this is the specific "client_secret" error that happens AFTER subscription creation
               final errorMessage = data['message']?.toString() ?? '';
-              final error = data['error']?.toString() ?? '';
+              data['error']?.toString() ?? '';
 
               if (errorMessage.contains("client_secret") ||
                   errorMessage.contains("Cannot read properties of null")) {
