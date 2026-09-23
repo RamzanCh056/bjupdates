@@ -13,16 +13,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 Future<void> firebaseMessageBackgroundHandle(RemoteMessage message) async {
   log("📱 Background Message received: ${message.messageId}");
   log("📱 Background Message data: ${message.data}");
-  
+
   // Store notification data for navigation when app opens
   try {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('pending_notification_navigation', jsonEncode(message.data));
+    await prefs.setString(
+      'pending_notification_navigation',
+      jsonEncode(message.data),
+    );
     log("💾 Stored background notification data");
   } catch (e) {
     log("❌ Error storing background notification: $e");
   }
-  
+
   // Display notification
   display(message);
 }
@@ -91,10 +94,12 @@ class NotificationService {
     if (initialMessage != null) {
       log("📱 App opened from terminated state via notification");
       log("📱 Initial message data: ${initialMessage!.data}");
-      
+
       // Store for navigation after app initializes
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        await Future.delayed(const Duration(seconds: 2)); // Wait for app to be ready
+        await Future.delayed(
+          const Duration(seconds: 2),
+        ); // Wait for app to be ready
         await handleNotificationTap(initialMessage!);
       });
     }
@@ -121,7 +126,7 @@ class NotificationService {
     try {
       log("🧭 Handling notification tap");
       log("🧭 Message data: ${message.data}");
-      
+
       if (message.data.isEmpty) {
         log("⚠️ No data in notification, navigating to notifications screen");
         // Navigate to notifications screen if no specific data
@@ -208,20 +213,29 @@ void display(RemoteMessage message) async {
   debugPrint('Message data: ${message.data}');
 
   try {
-    // Define an Android notification channel.
-    AndroidNotificationChannel channel = const AndroidNotificationChannel(
-      '0',
+    final plugin = FlutterLocalNotificationsPlugin();
+    final androidImpl = plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+
+    // Ensure a high-importance channel exists (heads-up) and that the
+    // Android 13+ notification permission is granted, then show.
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'beatjerky_default',
       'Beat Jerky',
-      description: 'Show Beat Jerky Notification',
+      description: 'Beat Jerky notifications',
       importance: Importance.max,
     );
+    await androidImpl?.createNotificationChannel(channel);
+    await androidImpl?.requestNotificationsPermission();
 
     // Define Android-specific notification details.
     AndroidNotificationDetails notificationDetails = AndroidNotificationDetails(
       channel.id,
       channel.name,
-      channelDescription: 'your channel Description',
-      importance: Importance.high,
+      channelDescription: 'Beat Jerky notifications',
+      importance: Importance.max,
       priority: Priority.high,
       ticker: 'ticker',
       icon: '@mipmap/ic_launcher',
@@ -245,9 +259,12 @@ void display(RemoteMessage message) async {
     final payload = jsonEncode(message.data);
     debugPrint('Displaying notification with payload: $payload');
 
-    // Display the notification
-    await FlutterLocalNotificationsPlugin().show(
-      0,
+    // Display the notification (unique id so notifications stack).
+    final notificationId = DateTime.now().millisecondsSinceEpoch.remainder(
+      100000,
+    );
+    await plugin.show(
+      notificationId,
       message.notification!.title,
       message.notification!.body,
       notificationDetailsBoth,

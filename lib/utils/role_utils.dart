@@ -37,7 +37,7 @@ List<String> parseRolesFromUserData(Map<String, dynamic>? data) {
     return rolesRaw
         .map(
           (e) => (e is String)
-              ? (e as String).trim().toLowerCase()
+              ? (e).trim().toLowerCase()
               : e.toString().trim().toLowerCase(),
         )
         .where((s) => s.isNotEmpty && _isValidNormalizedRole(s))

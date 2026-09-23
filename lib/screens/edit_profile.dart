@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/musician_career_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
@@ -166,6 +167,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'bio': _bioController.text.trim(),
         if (newProfileImageUrl != null) 'profileImage': newProfileImageUrl,
       });
+
+      // Keep the musician profile photo (hub + admin) in sync with the app photo.
+      if (newProfileImageUrl != null) {
+        MusicianCareerService.syncPhotoUrl(newProfileImageUrl);
+      }
 
       _showMessage('Profile updated successfully!');
       Navigator.pop(context); // Return to previous screen (optional)

@@ -1,8 +1,9 @@
+// ignore_for_file: unused_field
+
 import 'dart:convert';
 
 import 'package:beatjerky/Stripe/stripe_popup.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:fluttertoast/fluttertoast.dart';

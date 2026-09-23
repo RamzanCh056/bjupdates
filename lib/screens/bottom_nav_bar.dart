@@ -3,7 +3,10 @@ import 'package:beatjerky/screens/profile_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../utils/color.dart';
+import 'account/blocked_screen.dart';
+import '../services/account_status_service.dart';
 import 'New Feed/new_feed.dart';
 import 'home1/home1.dart';
 import 'leaderboard_screen.dart';
@@ -27,19 +30,30 @@ class _BottomNavBarState extends State<BottomNavBar> {
   }
 
   void _startPlanExpirationStream() {
-  final uid = FirebaseAuth.instance.currentUser?.uid;
-  if (uid == null) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
 
-  _planStream = FirebaseFirestore.instance
-      .collection("usersData")
-      .doc(uid)
-      .snapshots();
+    _planStream = FirebaseFirestore.instance
+        .collection("usersData")
+        .doc(uid)
+        .snapshots();
 
-  _planStream!.listen((doc) {
-    if (!doc.exists) return;
-    PremiumPlaneServices.checkPlanExpiration(doc);
-  });
-}
+    _planStream!.listen((doc) {
+      if (!doc.exists) return;
+      PremiumPlaneServices.checkPlanExpiration(doc);
+      _checkAccountStatus(doc);
+    });
+  }
+
+  bool _blockedHandled = false;
+  void _checkAccountStatus(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>?;
+    final accountStatus = AccountStatusModel.fromData(data);
+    if (accountStatus.isBlocked && !_blockedHandled && mounted) {
+      _blockedHandled = true;
+      Get.offAll(() => BlockedScreen(status: accountStatus));
+    }
+  }
 
   int _currentIndex = 0;
   List<dynamic> get _pages => [
@@ -54,39 +68,39 @@ class _BottomNavBarState extends State<BottomNavBar> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: Color(0xFF0A0E27),
-          type: BottomNavigationBarType.fixed,
-          selectedFontSize: 8,
-          unselectedFontSize: 7,
-          currentIndex: _currentIndex,
-          selectedItemColor: recntsColor,
-          unselectedItemColor: Colors.grey,
-          onTap: (v) {
-            setState(() {
-              _currentIndex = v;
-            });
-          },
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.graphic_eq_rounded),
-              label: 'Studio',
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.smart_toy), label: 'BJAI'),
-            BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.play_circle),
-              label: 'Video',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.emoji_events),
-              label: 'Leaderboard',
-            ),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-          ],
-        ),
-        body: _pages[_currentIndex],
-      );
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Color(0xFF0A0E27),
+        type: BottomNavigationBarType.fixed,
+        selectedFontSize: 8,
+        unselectedFontSize: 7,
+        currentIndex: _currentIndex,
+        selectedItemColor: recntsColor,
+        unselectedItemColor: Colors.grey,
+        onTap: (v) {
+          setState(() {
+            _currentIndex = v;
+          });
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.graphic_eq_rounded),
+            label: 'Studio',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.smart_toy), label: 'BJAI'),
+          BottomNavigationBarItem(icon: Icon(Icons.feed), label: 'Feed'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.play_circle),
+            label: 'Video',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.emoji_events),
+            label: 'Leaderboard',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
+      ),
+      body: _pages[_currentIndex],
+    );
   }
 }

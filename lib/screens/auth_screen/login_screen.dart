@@ -3,6 +3,8 @@ import 'dart:developer';
 import 'package:beatjerky/notification_services/notification_services.dart';
 import 'package:beatjerky/screens/auth_screen/signup_screen.dart';
 import 'package:flutter/material.dart';
+import '../account/blocked_screen.dart';
+import '../../services/account_status_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -74,7 +76,12 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.setString(UserModelFields.deviceId, fcmtoken!);
       }
 
+      final accountStatus = await AccountStatusService.fetch(user.uid);
       EasyLoading.dismiss();
+      if (accountStatus.isBlocked) {
+        Get.offAll(() => BlockedScreen(status: accountStatus));
+        return;
+      }
       Get.offAll(() => const BottomNavBar());
       AppToast.show('Login successful');
     } on FirebaseAuthException catch (e) {

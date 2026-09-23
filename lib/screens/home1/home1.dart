@@ -11,6 +11,7 @@ import 'package:beatjerky/utils/app_toast.dart';
 import 'package:beatjerky/utils/color.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../../widgets/musician/musician_tools_card.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -2511,6 +2512,8 @@ class _Home1State extends State<Home1> {
                               },
                             ),
                           ),
+
+                          const MusicianToolsCard(),
 
                           AiToolsSection(
                             onToolTap: _openAiTool,
