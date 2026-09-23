@@ -2251,7 +2251,12 @@ class _ReelsScreenState extends State<ReelsScreen> {
         }
         // Don't schedule playVideo here — visibility (isVisible) and _handlePageChanged handle play/pause.
         // Repeated callbacks on every stream rebuild caused stuck/repeated pause-play behavior.
-        return _buildReelsPageView(context, snapshot.data!.docs);
+        return _buildReelsPageView(
+          context,
+          snapshot.data!.docs
+              .where((d) => (d.data() as Map<String, dynamic>)['hidden'] != true)
+              .toList(),
+        );
       },
     );
   }

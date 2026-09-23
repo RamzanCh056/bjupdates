@@ -24,7 +24,6 @@ import '../widgets/profile/discover_people_section.dart';
 import '../widgets/profile/professional_dashboard_card.dart';
 import '../widgets/musician/musician_tools_card.dart';
 
-
 class ProfileScreen extends StatefulWidget {
   /// When null, shows the current user's profile (with Edit profile).
   /// When set, shows that user's profile (same layout, no Edit profile).
@@ -36,11 +35,14 @@ class ProfileScreen extends StatefulWidget {
   _ProfileScreenState createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
+class _ProfileScreenState extends State<ProfileScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   /// Profile user id: widget.userId for another user, else current user.
-  String get _profileUserId => widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _profileUserId =>
+      widget.userId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+
   /// True when viewing own profile (Edit profile and avatar picker shown).
   bool get _isOwnProfile => widget.userId == null;
 
@@ -76,7 +78,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       if (image != null) {
         EasyLoading.show(status: 'Uploading image...');
-        
+
         // Upload to Firebase Storage
         final user = FirebaseAuth.instance.currentUser;
         if (user == null) return;
@@ -88,21 +90,21 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
         final file = File(image.path);
         await storageRef.putFile(file);
-        
+
         // Get download URL
         final downloadURL = await storageRef.getDownloadURL();
-        
+
         // Update Firestore
         await FirebaseFirestore.instance
             .collection('usersData')
             .doc(user.uid)
             .update({'profileImage': downloadURL});
-        
+
         // Update local state
         setState(() {
           _profileImage = downloadURL;
         });
-        
+
         EasyLoading.showSuccess('Profile image updated!');
       }
     } catch (e) {
@@ -149,13 +151,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       // Load achievements
       await _loadAchievements();
-      
+
       // Check daily login
       await _checkDailyLogin();
-      
+
       // Check and unlock achievements
       await AchievementService.checkAndUnlockAchievements(user.uid);
-      
+
       // Check for newly unlocked achievements and show notifications
       await _checkForNewAchievements();
     } catch (e) {
@@ -171,14 +173,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       // Initialize achievements if they don't exist
       await AchievementService.initializeUserAchievements(user.uid);
-      
+
       // Load achievements using the service
-      final achievements = await AchievementService.getUserAchievements(user.uid);
-      
+      final achievements = await AchievementService.getUserAchievements(
+        user.uid,
+      );
+
       setState(() {
         _achievements = achievements;
       });
-      
+
       // Get current badge
       _getCurrentBadge();
     } catch (e) {
@@ -190,7 +194,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   void _getCurrentBadge() {
     if (_achievements.isNotEmpty) {
       // Get the most recent unlocked achievement
-      final unlockedAchievements = _achievements.where((a) => a.isUnlocked).toList();
+      final unlockedAchievements = _achievements
+          .where((a) => a.isUnlocked)
+          .toList();
       if (unlockedAchievements.isNotEmpty) {
         // Sort by points to get the highest achievement
         unlockedAchievements.sort((a, b) => b.points.compareTo(a.points));
@@ -201,8 +207,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     }
   }
 
-
-
   /// Check daily login and update streak
   Future<void> _checkDailyLogin() async {
     try {
@@ -211,7 +215,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      
+
       final doc = await FirebaseFirestore.instance
           .collection('userRewards')
           .doc(user.uid)
@@ -220,30 +224,34 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       if (doc.exists) {
         final data = doc.data()!;
         final lastLogin = data['lastLogin'];
-        
+
         if (lastLogin != null) {
           final lastLoginDate = (lastLogin as Timestamp).toDate();
-          final lastLoginDay = DateTime(lastLoginDate.year, lastLoginDate.month, lastLoginDate.day);
-          
+          final lastLoginDay = DateTime(
+            lastLoginDate.year,
+            lastLoginDate.month,
+            lastLoginDate.day,
+          );
+
           if (today.difference(lastLoginDay).inDays == 1) {
             // Consecutive day
             final newStreak = (data['dailyStreak'] ?? 0) + 1;
             final newPoints = (data['totalPoints'] ?? 0) + 10;
-            
+
             await FirebaseFirestore.instance
                 .collection('userRewards')
                 .doc(user.uid)
                 .update({
-              'dailyStreak': newStreak,
-              'totalPoints': newPoints,
-              'lastLogin': Timestamp.now(),
-            });
-            
+                  'dailyStreak': newStreak,
+                  'totalPoints': newPoints,
+                  'lastLogin': Timestamp.now(),
+                });
+
             setState(() {
               _dailyStreak = newStreak;
               _totalPoints = newPoints;
             });
-            
+
             _showStreakReward(newStreak);
           } else if (today.difference(lastLoginDay).inDays > 1) {
             // Streak broken
@@ -251,11 +259,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 .collection('userRewards')
                 .doc(user.uid)
                 .update({
-              'dailyStreak': 1,
-              'totalPoints': (data['totalPoints'] ?? 0) + 10,
-              'lastLogin': Timestamp.now(),
-            });
-            
+                  'dailyStreak': 1,
+                  'totalPoints': (data['totalPoints'] ?? 0) + 10,
+                  'lastLogin': Timestamp.now(),
+                });
+
             setState(() {
               _dailyStreak = 1;
               _totalPoints = (data['totalPoints'] ?? 0) + 10;
@@ -267,12 +275,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               .collection('userRewards')
               .doc(user.uid)
               .set({
-            'dailyStreak': 1,
-            'totalPoints': 10,
-            'lastLogin': Timestamp.now(),
-            'level': 1,
-          });
-          
+                'dailyStreak': 1,
+                'totalPoints': 10,
+                'lastLogin': Timestamp.now(),
+                'level': 1,
+              });
+
           setState(() {
             _dailyStreak = 1;
             _totalPoints = 10;
@@ -284,12 +292,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             .collection('userRewards')
             .doc(user.uid)
             .set({
-          'dailyStreak': 1,
-          'totalPoints': 10,
-          'lastLogin': Timestamp.now(),
-          'level': 1,
-        });
-        
+              'dailyStreak': 1,
+              'totalPoints': 10,
+              'lastLogin': Timestamp.now(),
+              'level': 1,
+            });
+
         setState(() {
           _dailyStreak = 1;
           _totalPoints = 10;
@@ -313,7 +321,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             SizedBox(width: 10),
             Text(
               'Daily Streak!',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ],
         ),
@@ -341,33 +352,33 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       if (user == null) return;
 
       // Get current achievements
-      final currentAchievements = await AchievementService.getUserAchievements(user.uid);
-      
+      final currentAchievements = await AchievementService.getUserAchievements(
+        user.uid,
+      );
+
       // Find newly unlocked achievements
       for (final achievement in currentAchievements) {
-        if (achievement.isUnlocked && 
+        if (achievement.isUnlocked &&
             achievement.unlockedAt != null &&
-            achievement.unlockedAt!.toDate().isAfter(DateTime.now().subtract(Duration(minutes: 5)))) {
+            achievement.unlockedAt!.toDate().isAfter(
+              DateTime.now().subtract(Duration(minutes: 5)),
+            )) {
           // Show notification for recently unlocked achievement
           _showAchievementUnlocked(achievement);
         }
       }
-      
+
       // Update local achievements
       setState(() {
         _achievements = currentAchievements;
       });
-      
+
       // Update current badge
       _getCurrentBadge();
     } catch (e) {
       debugPrint('Error checking for new achievements: $e');
     }
   }
-
-
-
-
 
   /// Show achievement unlocked notification
   void _showAchievementUnlocked(Achievement achievement) {
@@ -378,7 +389,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           // Confetti background
           ConfettiWidget(isActive: true),
-          
+
           // Achievement dialog
           Center(
             child: Dialog(
@@ -419,7 +430,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       },
                     ),
                     SizedBox(height: 25),
-                    
+
                     // Achievement title with animation
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: 1.0),
@@ -443,7 +454,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       },
                     ),
                     SizedBox(height: 15),
-                    
+
                     // Achievement name
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: 1.0),
@@ -467,7 +478,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       },
                     ),
                     SizedBox(height: 10),
-                    
+
                     // Achievement description
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: 1.0),
@@ -490,7 +501,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       },
                     ),
                     SizedBox(height: 25),
-                    
+
                     // Points earned with animation
                     TweenAnimationBuilder<double>(
                       tween: Tween(begin: 0.0, end: 1.0),
@@ -499,7 +510,10 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         return Transform.scale(
                           scale: value,
                           child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 30,
+                              vertical: 15,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(25),
@@ -507,7 +521,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.star, color: Colors.amber.shade800, size: 24),
+                                Icon(
+                                  Icons.star,
+                                  color: Colors.amber.shade800,
+                                  size: 24,
+                                ),
                                 SizedBox(width: 10),
                                 Text(
                                   '+${achievement.points} Points!',
@@ -531,7 +549,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         ],
       ),
     );
-    
+
     // Auto-close after 3 seconds
     Future.delayed(Duration(seconds: 3), () {
       if (Navigator.canPop(context)) {
@@ -552,14 +570,19 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         return;
       }
 
-      final doc = await FirebaseFirestore.instance.collection('usersData').doc(uid).get();
+      final doc = await FirebaseFirestore.instance
+          .collection('usersData')
+          .doc(uid)
+          .get();
 
       if (doc.exists) {
         final data = doc.data()!;
         setState(() {
           _firstName = data['firstName'] ?? '';
           _lastName = data['secondName'] ?? '';
-          _email = _isOwnProfile && user != null ? user.email : (data['email'] as String?);
+          _email = _isOwnProfile && user != null
+              ? user.email
+              : (data['email'] as String?);
           _profileImage = data['profileImage'] as String?;
           _bio = data['bio'] as String?;
           _isPaid = (data['isPaid'] ?? false) as bool;
@@ -581,7 +604,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       await prefs.remove(UserModelFields.deviceId);
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen(selectedRole: '',)),
+        MaterialPageRoute(
+          builder: (context) => const LoginScreen(selectedRole: ''),
+        ),
       );
     } catch (e) {
       EasyLoading.showError("Logout failed");
@@ -606,12 +631,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         body: Center(
           child: Text(
             'Unable to load profile',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 16),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7),
+              fontSize: 16,
+            ),
           ),
         ),
       );
     }
-    final myDocRef = FirebaseFirestore.instance.collection('usersData').doc(_profileUserId);
+    final myDocRef = FirebaseFirestore.instance
+        .collection('usersData')
+        .doc(_profileUserId);
     return Scaffold(
       backgroundColor: darkBackgroundPrimary,
       appBar: AppBar(
@@ -622,7 +652,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         automaticallyImplyLeading: Navigator.canPop(context),
         leading: Navigator.canPop(context)
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 22),
+                icon: const Icon(
+                  Icons.arrow_back_ios,
+                  color: Colors.white,
+                  size: 22,
+                ),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
@@ -665,12 +699,27 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               labelColor: Colors.white,
               unselectedLabelColor: Colors.white54,
               dividerColor: Colors.transparent,
-              labelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
-              unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w400, fontSize: 12),
+              labelStyle: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontWeight: FontWeight.w400,
+                fontSize: 12,
+              ),
               tabs: const [
-                Tab(icon: Icon(Icons.grid_on_rounded, size: 26), text: 'Photos'),
-                Tab(icon: Icon(Icons.play_circle_outline_rounded, size: 26), text: 'Videos'),
-                Tab(icon: Icon(Icons.music_note_rounded, size: 26), text: 'Songs'),
+                Tab(
+                  icon: Icon(Icons.grid_on_rounded, size: 26),
+                  text: 'Photos',
+                ),
+                Tab(
+                  icon: Icon(Icons.play_circle_outline_rounded, size: 26),
+                  text: 'Videos',
+                ),
+                Tab(
+                  icon: Icon(Icons.music_note_rounded, size: 26),
+                  text: 'Songs',
+                ),
               ],
             ),
           ),
@@ -728,10 +777,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         ),
       );
     }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: rows,
-    );
+    return Column(mainAxisSize: MainAxisSize.min, children: rows);
   }
 
   double _gridHeight(
@@ -754,257 +800,289 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-                // Instagram-style header: avatar left, stats right
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
-                  child: StreamBuilder<DocumentSnapshot>(
-                    stream: myDocRef.snapshots(),
-                    builder: (context, meSnap) {
-                      if (meSnap.connectionState == ConnectionState.waiting) {
-                        return _buildProfileHeaderRow(0, 0, 0, 0);
-                      }
-                      final meData = meSnap.data?.data() as Map<String, dynamic>? ?? {};
-                      final followers = List<String>.from(meData['followers'] ?? []);
-                      final following = List<String>.from(meData['following'] ?? []);
+        // Instagram-style header: avatar left, stats right
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 12),
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: myDocRef.snapshots(),
+            builder: (context, meSnap) {
+              if (meSnap.connectionState == ConnectionState.waiting) {
+                return _buildProfileHeaderRow(0, 0, 0, 0);
+              }
+              final meData = meSnap.data?.data() as Map<String, dynamic>? ?? {};
+              final followers = List<String>.from(meData['followers'] ?? []);
+              final following = List<String>.from(meData['following'] ?? []);
 
+              return StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('songs')
+                    .where('userId', isEqualTo: _profileUserId)
+                    .snapshots(),
+                builder: (context, songsSnap) {
+                  if (songsSnap.connectionState == ConnectionState.waiting) {
+                    return _buildProfileHeaderRow(
+                      0,
+                      followers.length,
+                      following.length,
+                      0,
+                    );
+                  }
+
+                  return StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('reels')
+                        .where('userId', isEqualTo: _profileUserId)
+                        .snapshots(),
+                    builder: (context, videosSnap) {
+                      if (videosSnap.connectionState ==
+                          ConnectionState.waiting) {
+                        return _buildProfileHeaderRow(
+                          0,
+                          followers.length,
+                          following.length,
+                          0,
+                        );
+                      }
+                      final videoDocs = videosSnap.data?.docs ?? [];
+                      final videoCount = videoDocs.length.toInt();
+
+                      // Use same source of truth as reels screen: prefer
+                      // likedBy.length so total matches what reels show.
+                      int totalLikes = 0;
+                      for (final doc in videoDocs) {
+                        final data = doc.data() as Map<String, dynamic>?;
+                        final likedBy = data?['likedBy'];
+                        if (likedBy is List && likedBy.isNotEmpty) {
+                          totalLikes += likedBy.length;
+                        } else {
+                          final likesField = data?['likes'];
+                          if (likesField is int) {
+                            totalLikes += likesField;
+                          }
+                        }
+                      }
                       return StreamBuilder<QuerySnapshot>(
                         stream: FirebaseFirestore.instance
-                            .collection('songs')
+                            .collection('posts')
                             .where('userId', isEqualTo: _profileUserId)
+                            .where('type', isEqualTo: 'image')
                             .snapshots(),
-                        builder: (context, songsSnap) {
-                          if (songsSnap.connectionState == ConnectionState.waiting) {
+                        builder: (context, postsSnap) {
+                          if (postsSnap.connectionState ==
+                              ConnectionState.waiting) {
                             return _buildProfileHeaderRow(
-                              0,
+                              videoCount,
                               followers.length,
                               following.length,
-                              0,
+                              totalLikes,
                             );
                           }
-
-                          return StreamBuilder<QuerySnapshot>(
-                            stream: FirebaseFirestore.instance
-                                .collection('reels')
-                                .where('userId', isEqualTo: _profileUserId)
-                                .snapshots(),
-                            builder: (context, videosSnap) {
-                              if (videosSnap.connectionState == ConnectionState.waiting) {
-                                return _buildProfileHeaderRow(
-                                  0,
-                                  followers.length,
-                                  following.length,
-                                  0,
-                                );
-                              }
-                              final videoDocs = videosSnap.data?.docs ?? [];
-                              final videoCount = videoDocs.length.toInt();
-
-                              // Use same source of truth as reels screen: prefer
-                              // likedBy.length so total matches what reels show.
-                              int totalLikes = 0;
-                              for (final doc in videoDocs) {
-                                final data = doc.data() as Map<String, dynamic>?;
-                                final likedBy = data?['likedBy'];
-                                if (likedBy is List && likedBy.isNotEmpty) {
-                                  totalLikes += likedBy.length;
-                                } else {
-                                  final likesField = data?['likes'];
-                                  if (likesField is int) {
-                                    totalLikes += likesField;
-                                  }
-                                }
-                              }
-                              return StreamBuilder<QuerySnapshot>(
-                                stream: FirebaseFirestore.instance
-                                    .collection('posts')
-                                    .where('userId', isEqualTo: _profileUserId)
-                                    .where('type', isEqualTo: 'image')
-                                    .snapshots(),
-                                builder: (context, postsSnap) {
-                                  if (postsSnap.connectionState == ConnectionState.waiting) {
-                                    return _buildProfileHeaderRow(
-                                      videoCount,
-                                      followers.length,
-                                      following.length,
-                                      totalLikes,
-                                    );
-                                  }
-                                  final imagePostCount = (postsSnap.data?.docs.length ?? 0).toInt();
-                                  final totalPostsCount = videoCount + imagePostCount;
-                                  return _buildProfileHeaderRow(
-                                    totalPostsCount,
-                                    followers.length,
-                                    following.length,
-                                    totalLikes,
-                                  );
-                                },
-                              );
-                            },
+                          final imagePostCount =
+                              (postsSnap.data?.docs.length ?? 0).toInt();
+                          final totalPostsCount = videoCount + imagePostCount;
+                          return _buildProfileHeaderRow(
+                            totalPostsCount,
+                            followers.length,
+                            following.length,
+                            totalLikes,
                           );
                         },
                       );
                     },
-                  ),
-                ),
-                // Name + badges in one row (spaceBetween), then @handle, then bio
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                NameUtils.getDisplayName(_firstName, _lastName),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            if (_currentBadge != null || _isPaid) ...[
-                              Container(
-                                height: 20,
-                                width: 1,
-                                margin: const EdgeInsets.only(left: 12, right: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(1),
-                                ),
-                              ),
-                              Wrap(
-                                spacing: 6,
-                                runSpacing: 6,
-                                alignment: WrapAlignment.end,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  if (_isPaid)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue.shade400.withValues(alpha: 0.18),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: Colors.blue.shade400.withValues(alpha: 0.5),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.verified_rounded, color: Colors.blue.shade300, size: 14),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'Verified',
-                                            style: TextStyle(
-                                              color: Colors.blue.shade300,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  if (_currentBadge != null)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Colors.amber.shade600.withValues(alpha: 0.25),
-                                            Colors.orange.shade600.withValues(alpha: 0.2),
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: Colors.amber.shade400.withValues(alpha: 0.6),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.emoji_events_rounded, color: Colors.amber.shade300, size: 14),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            // 'Achievement · 
-                                            '$_currentBadge',
-                                            style: TextStyle(
-                                              color: Colors.amber.shade200,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ],
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        // Name + badges in one row (spaceBetween), then @handle, then bio
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        NameUtils.getDisplayName(_firstName, _lastName),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
                         ),
-                        if (_email != null && _email!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            '@${_email!.split('@').first}',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ],
-                        if (_bio != null && _bio!.trim().isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _bio!,
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.9),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              height: 1.35,
-                            ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Edit profile button (only for own profile, Instagram style)
-                if (_isOwnProfile) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _editProfile,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
-                          side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('Edit profile', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (_currentBadge != null || _isPaid) ...[
+                      Container(
+                        height: 20,
+                        width: 1,
+                        margin: const EdgeInsets.only(left: 12, right: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(1),
+                        ),
+                      ),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        alignment: WrapAlignment.end,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (_isPaid)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.shade400.withValues(
+                                  alpha: 0.18,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.blue.shade400.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.verified_rounded,
+                                    color: Colors.blue.shade300,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Verified',
+                                    style: TextStyle(
+                                      color: Colors.blue.shade300,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          if (_currentBadge != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.amber.shade600.withValues(
+                                      alpha: 0.25,
+                                    ),
+                                    Colors.orange.shade600.withValues(
+                                      alpha: 0.2,
+                                    ),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.amber.shade400.withValues(
+                                    alpha: 0.6,
+                                  ),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.emoji_events_rounded,
+                                    color: Colors.amber.shade300,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    // 'Achievement ·
+                                    '$_currentBadge',
+                                    style: TextStyle(
+                                      color: Colors.amber.shade200,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+                if (_email != null && _email!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '@${_email!.split('@').first}',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  ProfessionalDashboardCard(userId: _profileUserId),
-                  const MusicianToolsCard(),
-                  const DiscoverPeopleSection(),
                 ],
+                if (_bio != null && _bio!.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _bio!,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      height: 1.35,
+                    ),
+                    maxLines: 4,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Edit profile button (only for own profile, Instagram style)
+        if (_isOwnProfile) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _editProfile,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'Edit profile',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ProfessionalDashboardCard(userId: _profileUserId),
+          const MusicianToolsCard(),
+          const DiscoverPeopleSection(),
+        ],
       ],
     );
   }
@@ -1021,11 +1099,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Skeleton(
-                  height: 88,
-                  width: 88,
-                  shape: BoxShape.circle,
-                ),
+                Skeleton(height: 88, width: 88, shape: BoxShape.circle),
                 const SizedBox(width: 28),
                 Expanded(
                   child: Row(
@@ -1121,6 +1195,41 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
+  /// Small overlay badge shown on the owner's hidden posts/reels (admin-hidden).
+  Widget _hiddenBadge() {
+    return Positioned(
+      top: 6,
+      left: 6,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.visibility_off, size: 12, color: Colors.white),
+            SizedBox(width: 4),
+            Text(
+              'Hidden',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _badged(bool hidden, Widget child) {
+    if (!hidden) return child;
+    return Stack(fit: StackFit.expand, children: [child, _hiddenBadge()]);
+  }
+
   Widget _buildPhotosTabContent() {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
@@ -1168,8 +1277,15 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           );
         }
 
-        final docs = snapshot.data!.docs;
-        final profileUserName = NameUtils.getDisplayName(_firstName, _lastName).trim().isEmpty
+        final docs = _isOwnProfile
+            ? snapshot.data!.docs
+            : snapshot.data!.docs
+                  .where(
+                    (d) => (d.data() as Map<String, dynamic>)['hidden'] != true,
+                  )
+                  .toList();
+        final profileUserName =
+            NameUtils.getDisplayName(_firstName, _lastName).trim().isEmpty
             ? 'User'
             : NameUtils.getDisplayName(_firstName, _lastName);
 
@@ -1181,6 +1297,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
             final imageUrl = data['fileUrl'] ?? '';
+            final hidden = data['hidden'] == true;
 
             if (imageUrl.isEmpty) {
               return Container(
@@ -1193,42 +1310,45 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               );
             }
 
-            return Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => ProfilePhotosFeedScreen(
-                        profileUserId: _profileUserId,
-                        profileUserName: profileUserName,
-                        profileUserImage: _profileImage,
-                        initialPostId: doc.id,
+            return _badged(
+              hidden,
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ProfilePhotosFeedScreen(
+                          profileUserId: _profileUserId,
+                          profileUserName: profileUserName,
+                          profileUserImage: _profileImage,
+                          initialPostId: doc.id,
+                        ),
                       ),
-                    ),
-                  );
-                },
-                child: ClipRect(
-                  child: CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    placeholder: (context, url) => Container(
-                      color: darkBackgroundTertiary,
-                      child: Icon(
-                        Icons.image_rounded,
-                        color: Colors.white.withValues(alpha: 0.3),
-                        size: 32,
+                    );
+                  },
+                  child: ClipRect(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: double.infinity,
+                      placeholder: (context, url) => Container(
+                        color: darkBackgroundTertiary,
+                        child: Icon(
+                          Icons.image_rounded,
+                          color: Colors.white.withValues(alpha: 0.3),
+                          size: 32,
+                        ),
                       ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: darkBackgroundTertiary,
-                      child: Icon(
-                        Icons.broken_image_rounded,
-                        color: Colors.white.withValues(alpha: 0.5),
-                        size: 32,
+                      errorWidget: (context, url, error) => Container(
+                        color: darkBackgroundTertiary,
+                        child: Icon(
+                          Icons.broken_image_rounded,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          size: 32,
+                        ),
                       ),
                     ),
                   ),
@@ -1307,7 +1427,13 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           );
         }
 
-        final docs = snapshot.data!.docs;
+        final docs = _isOwnProfile
+            ? snapshot.data!.docs
+            : snapshot.data!.docs
+                  .where(
+                    (d) => (d.data() as Map<String, dynamic>)['hidden'] != true,
+                  )
+                  .toList();
 
         return _buildStaticGrid(
           crossAxisCount: 3,
@@ -1400,8 +1526,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           views >= 1000000
                               ? '${(views / 1000000).toStringAsFixed(1)}M'
                               : views >= 1000
-                                  ? '${(views / 1000).toStringAsFixed(1)}K'
-                                  : '$views',
+                              ? '${(views / 1000).toStringAsFixed(1)}K'
+                              : '$views',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -1432,6 +1558,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                       child: const SizedBox.expand(),
                     ),
                   ),
+                  if (data['hidden'] == true) _hiddenBadge(),
                 ],
               ),
             );
@@ -1451,9 +1578,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox(
             height: 200,
-            child: Center(
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
           );
         }
 
@@ -1512,10 +1637,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             children: List.generate(docs.length, (index) {
               final doc = docs[index];
               final data = doc.data() as Map<String, dynamic>;
-              final song = {
-                ...data,
-                'id': doc.id,
-              };
+              final song = {...data, 'id': doc.id};
               final isOwner = song['userId'] == currentUid;
 
               return Container(
@@ -1570,7 +1692,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Expanded(
                                       child: Text(
@@ -1595,7 +1718,9 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                                         Text(
                                           (song['year'] ?? '').toString(),
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(0.5),
+                                            color: Colors.white.withOpacity(
+                                              0.5,
+                                            ),
                                             fontSize: r(12),
                                           ),
                                         ),
@@ -1643,7 +1768,12 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   /// Instagram-style header row: avatar left, stats (Posts, Followers, Following, Likes) right
-  Widget _buildProfileHeaderRow(int postsCount, int followersCount, int followingCount, int totalLikesCount) {
+  Widget _buildProfileHeaderRow(
+    int postsCount,
+    int followersCount,
+    int followingCount,
+    int totalLikesCount,
+  ) {
     final avatarStack = Stack(
       children: [
         CircleAvatar(
@@ -1653,7 +1783,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               : null,
           backgroundColor: Colors.white.withValues(alpha: 0.1),
           child: _profileImage == null || _profileImage!.isEmpty
-              ? const Icon(Icons.person_rounded, color: Colors.white54, size: 44)
+              ? const Icon(
+                  Icons.person_rounded,
+                  color: Colors.white54,
+                  size: 44,
+                )
               : null,
         ),
         if (_isPaid)
@@ -1667,7 +1801,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 shape: BoxShape.circle,
                 border: Border.all(color: darkBackgroundPrimary, width: 2),
               ),
-              child: const Icon(Icons.verified_rounded, color: Colors.white, size: 12),
+              child: const Icon(
+                Icons.verified_rounded,
+                color: Colors.white,
+                size: 12,
+              ),
             ),
           ),
         if (_currentBadge != null)
@@ -1685,7 +1823,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 shape: BoxShape.circle,
                 border: Border.all(color: darkBackgroundPrimary, width: 2),
               ),
-              child: const Icon(Icons.emoji_events_rounded, color: Colors.white, size: 10),
+              child: const Icon(
+                Icons.emoji_events_rounded,
+                color: Colors.white,
+                size: 10,
+              ),
             ),
           ),
         if (_isOwnProfile)
@@ -1699,7 +1841,11 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 shape: BoxShape.circle,
                 border: Border.all(color: darkBackgroundPrimary, width: 2),
               ),
-              child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
+              child: const Icon(
+                Icons.camera_alt_rounded,
+                color: Colors.white,
+                size: 14,
+              ),
             ),
           ),
       ],
