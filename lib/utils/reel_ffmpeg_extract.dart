@@ -46,6 +46,9 @@ List<String> _h264VideoEncodeArgsK(int brK) {
       'h264_mediacodec',
       '-b:v',
       '${brK}k',
+      // MediaCodec's H.264 encoder is unreliable with B-frames on many devices.
+      '-bf',
+      '0',
     ];
   }
   return [
@@ -90,55 +93,69 @@ Future<File?> compressReelVideoForPreview({
   final totalMs = totalDurationMs ?? 0.0;
   final spanMs = hasTrim ? (endMs - trimStartMs) : (totalMs > 0 ? totalMs : 0.0);
 
-  final args = <String>[
-    '-y',
-    if (trimStartMs > 32) ...['-ss', '${trimStartMs / 1000.0}'],
-    '-i',
-    inputPath,
-    if (hasTrim) ...['-t', '${(endMs - trimStartMs) / 1000.0}'],
-    '-vf',
-    vf,
-    ..._h264VideoEncodeArgsK(brK),
-    '-c:a',
-    'aac',
-    '-b:a',
-    '128k',
-    '-movflags',
-    '+faststart',
-    outPath,
-  ];
+  List<String> buildArgs(List<String> videoEncoder, String videoFilter) => <String>[
+        '-y',
+        if (trimStartMs > 32) ...['-ss', '${trimStartMs / 1000.0}'],
+        '-i',
+        inputPath,
+        if (hasTrim) ...['-t', '${(endMs - trimStartMs) / 1000.0}'],
+        '-vf',
+        videoFilter,
+        ...videoEncoder,
+        '-c:a',
+        'aac',
+        '-b:a',
+        '128k',
+        '-movflags',
+        '+faststart',
+        outPath,
+      ];
 
-  final completer = Completer<bool>();
+  Future<bool> runEncode(List<String> args) async {
+    final completer = Completer<bool>();
+    await FFmpegKit.executeWithArgumentsAsync(
+      args,
+      (session) async {
+        final rc = await session.getReturnCode();
+        final ok = ReturnCode.isSuccess(rc);
+        if (!ok) {
+          final failStack = await session.getFailStackTrace();
+          final logs = await session.getAllLogsAsString();
+          // ignore: avoid_print
+          print(
+            'compressReelVideoForPreview: ffmpeg failed rc=$rc '
+            'stack=$failStack logs=$logs',
+          );
+        }
+        if (!completer.isCompleted) completer.complete(ok);
+      },
+      null,
+      (stats) {
+        if (spanMs <= 0) {
+          onProgress(0.5);
+          return;
+        }
+        final t = stats.getTime();
+        final p = (t / spanMs).clamp(0.0, 1.0);
+        onProgress(p);
+      },
+    );
+    return completer.future;
+  }
 
-  await FFmpegKit.executeWithArgumentsAsync(
-    args,
-    (session) async {
-      final rc = await session.getReturnCode();
-      final ok = ReturnCode.isSuccess(rc);
-      if (!ok) {
-        final failStack = await session.getFailStackTrace();
-        final logs = await session.getAllLogsAsString();
-        // ignore: avoid_print
-        print(
-          'compressReelVideoForPreview: ffmpeg failed rc=$rc '
-          'stack=$failStack logs=$logs',
-        );
-      }
-      if (!completer.isCompleted) completer.complete(ok);
-    },
-    null,
-    (stats) {
-      if (spanMs <= 0) {
-        onProgress(0.5);
-        return;
-      }
-      final t = stats.getTime();
-      final p = (t / spanMs).clamp(0.0, 1.0);
-      onProgress(p);
-    },
-  );
+  // Primary path: hardware encoder (h264_mediacodec / videotoolbox), with a
+  // yuv420p input so MediaCodec gets a format it accepts.
+  var ok = await runEncode(buildArgs(_h264VideoEncodeArgsK(brK), '$vf,format=yuv420p'));
 
-  final ok = await completer.future;
+  // Fallback (Android): some devices' MediaCodec H.264 encoder fails outright.
+  // Retry with the software MPEG-4 encoder bundled in this min FFmpeg build so
+  // the export still completes (libx264 is GPL and not available here).
+  if (!ok && Platform.isAndroid) {
+    // ignore: avoid_print
+    print('compressReelVideoForPreview: hardware encode failed, retrying with software mpeg4');
+    ok = await runEncode(buildArgs(const ['-c:v', 'mpeg4', '-q:v', '4'], vf));
+  }
+
   onProgress(1.0);
   if (!ok) return null;
   final out = File(outPath);

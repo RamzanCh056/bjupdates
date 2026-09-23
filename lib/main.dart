@@ -8,6 +8,9 @@ import 'package:beatjerky/providers/music_style_provider/music_style_provider.da
 import 'package:beatjerky/providers/song_provider/song_provider.dart';
 import 'package:beatjerky/providers/user_provider.dart';
 import 'package:beatjerky/screens/splash_screen.dart';
+import 'package:beatjerky/services/account_status_service.dart';
+import 'package:beatjerky/screens/account/blocked_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:beatjerky/services/navigation_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -145,11 +148,27 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   @override
+  bool _routingToBlocked = false;
+
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       // Check for pending navigation when app resumes
       NavigationService.checkPendingNavigation();
+      _enforceAccountStatus();
     }
+  }
+
+  /// On resume, if the signed-in user has been suspended or banned, route them
+  /// to the Blocked screen from wherever they are. Fails open on read errors.
+  Future<void> _enforceAccountStatus() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null || _routingToBlocked) return;
+    final accountStatus = await AccountStatusService.fetch(uid);
+    if (!accountStatus.isBlocked) return;
+    if (Get.currentRoute.contains('BlockedScreen')) return;
+    _routingToBlocked = true;
+    await Get.offAll(() => BlockedScreen(status: accountStatus));
+    _routingToBlocked = false;
   }
 }

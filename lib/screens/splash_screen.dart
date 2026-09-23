@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../services/navigation_service.dart';
 import 'auth_screen/login_screen.dart';
 import 'bottom_nav_bar.dart';
+import 'account/blocked_screen.dart';
+import '../services/account_status_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -24,6 +26,18 @@ class _SplashScreenState extends State<SplashScreen> {
     Timer(const Duration(seconds: 1), () async {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
+        final accountStatus = await AccountStatusService.fetch(user.uid);
+        if (!mounted) return;
+        if (accountStatus.isBlocked) {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BlockedScreen(status: accountStatus),
+            ),
+            (_) => false,
+          );
+          return;
+        }
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => const BottomNavBar()),
@@ -37,7 +51,9 @@ class _SplashScreenState extends State<SplashScreen> {
         // not signed in
         Navigator.pushAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (_) => const LoginScreen(selectedRole: '',)),
+          MaterialPageRoute(
+            builder: (_) => const LoginScreen(selectedRole: ''),
+          ),
           (_) => false,
         );
       }
@@ -47,14 +63,14 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(
-          child: SizedBox(
-            height: 200,
-            width: 200,
-            child: Image.asset("assets/images/logo.png", fit: BoxFit.cover),
-          ),
+      backgroundColor: Colors.black,
+      body: Center(
+        child: SizedBox(
+          height: 200,
+          width: 200,
+          child: Image.asset("assets/images/logo.png", fit: BoxFit.cover),
         ),
-      );
+      ),
+    );
   }
 }

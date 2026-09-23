@@ -80,6 +80,16 @@ class _ReelGalleryPickerScreenState extends State<ReelGalleryPickerScreen> {
         type: RequestType.video,
         hasAll: true,
         onlyAll: false,
+        // Explicit orderBy avoids a photo_manager bug where an empty ORDER BY
+        // produces invalid SQL ("ORDER BY LIMIT ...") on some Android builds.
+        filterOption: FilterOptionGroup(
+          orderBy: [
+            const OrderOption(
+              type: OrderOptionType.createDate,
+              asc: false,
+            ),
+          ],
+        ),
       );
       if (paths.isEmpty) {
         setState(() => _loading = false);
