@@ -540,34 +540,6 @@ class _ReelIntermediatePreviewScreenState
     _musicPlayer = null;
   }
 
-  /// Persists a reel-export failure to Firestore so we can diagnose devices
-  /// that still can't prepare a video. Best-effort and never throws.
-  Future<void> _reportExportFailure(
-    String report, {
-    required bool threw,
-  }) async {
-    try {
-      // Firestore documents cap at ~1MB — keep the tail (where the error is).
-      const maxLen = 40000;
-      final trimmed = report.length > maxLen
-          ? report.substring(report.length - maxLen)
-          : report;
-      await widget.firestore.collection('reel_export_failures').add({
-        'userId': widget.auth.currentUser?.uid,
-        'platform': Platform.operatingSystem,
-        'threw': threw,
-        'inputPath': _file.path,
-        'trimStartMs': _trimStartMs,
-        'trimEndMs': _trimEndMs,
-        'durationMs': _durationMs,
-        'report': trimmed,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    } catch (_) {
-      // Never let diagnostics reporting affect the user flow.
-    }
-  }
-
   Future<void> _goShare() async {
     if (_compressingForPreview) return;
     _clampTrimToDuration();
@@ -598,14 +570,8 @@ class _ReelIntermediatePreviewScreenState
             setState(() => _compressProgress = p.clamp(0.0, 1.0));
           }
         },
-        // On total failure, persist the diagnostic so we can inspect any
-        // device that still can't export (see reel_export_failures).
-        onFailure: (report) {
-          _reportExportFailure(report, threw: false);
-        },
       );
-    } catch (e, st) {
-      _reportExportFailure('THREW: $e\n$st', threw: true);
+    } catch (e) {
       if (mounted) {
         AppToast.show('Compression failed: $e', isError: true);
       }
