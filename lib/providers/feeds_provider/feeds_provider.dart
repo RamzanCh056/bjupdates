@@ -113,7 +113,9 @@ class FeedProvider with ChangeNotifier {
         .listen(
           (snapshot) {
             try {
-              _posts = snapshot.docs.map((doc) {
+              _posts = snapshot.docs
+                  .where((doc) => doc.data()['hidden'] != true)
+                  .map((doc) {
                 final data = doc.data();
                 return {
                   'id': doc.id,
