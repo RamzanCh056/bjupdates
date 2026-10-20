@@ -12,6 +12,15 @@ import 'package:beatjerky/utils/color.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../widgets/musician/musician_tools_card.dart';
+import '../../widgets/opportunities_card.dart';
+import '../../widgets/directory_card.dart';
+import '../../widgets/calendar_card.dart';
+import '../../widgets/my_space_card.dart';
+import '../../widgets/assistant_card.dart';
+import '../../widgets/suppliers_card.dart';
+import '../../widgets/invoices_card.dart';
+import '../../widgets/royalties_card.dart';
+import '../../widgets/profile/discover_people_section.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -2514,6 +2523,15 @@ class _Home1State extends State<Home1> {
                           ),
 
                           const MusicianToolsCard(),
+                          const OpportunitiesCard(),
+                          const DirectoryCard(),
+                          const CalendarCard(),
+                          const MySpaceCard(),
+                          const AssistantCard(),
+                          const SuppliersCard(),
+                          const InvoicesCard(),
+                          const RoyaltiesCard(),
+                          const DiscoverPeopleSection(),
 
                           AiToolsSection(
                             onToolTap: _openAiTool,

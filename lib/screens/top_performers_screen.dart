@@ -1,4 +1,5 @@
 import 'package:beatjerky/utils/color.dart';
+import '../widgets/user_badges.dart';
 import 'package:beatjerky/screens/view_user_profile_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -283,6 +284,8 @@ class _LeaderboardTile extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    const SizedBox(width: 5),
+                    UserBadges(uid: entry.userId, size: 15),
                     if (isCurrentUser) ...[
                       const SizedBox(width: 8),
                       Container(

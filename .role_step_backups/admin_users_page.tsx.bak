@@ -1,0 +1,213 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, ChevronRight as Chevron, Loader2, RefreshCw, Search, Users } from "lucide-react";
+import { useAdminUi } from "@/lib/adminUi";
+import { usePaginatedCollection } from "@/lib/firebase/hooks";
+import { can } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
+import { EmptyState, NoAccess, PageHeader, btnGhost } from "@/components/ui";
+
+type AppUser = {
+  id: string;
+  displayName?: string;
+  firstName?: string;
+  secondName?: string;
+  name?: string;
+  fullName?: string;
+  username?: string;
+  email?: string;
+  photoURL?: string;
+  profileImage?: string;
+  imageUrl?: string;
+  role?: string;
+  userType?: string;
+  roles?: string[];
+  isPaid?: boolean;
+  paidPlan?: string;
+  subscription?: string;
+  hasSubscription?: boolean;
+  subscriptionActive?: boolean;
+  accountStatus?: "active" | "suspended" | "banned";
+  createdAt?: { toDate?: () => Date } | number | string;
+  lastActive?: { toDate?: () => Date } | number | string;
+  bio?: string;
+};
+
+function userName(user: AppUser) {
+  const fullName = [user.firstName, user.secondName].filter(Boolean).join(" ");
+  return fullName || user.displayName || user.fullName || user.name || user.username || "Unnamed user";
+}
+function userImage(user: AppUser) {
+  return user.photoURL || user.profileImage || user.imageUrl;
+}
+function displayDate(value: AppUser["createdAt"]) {
+  if (!value) return "—";
+  const date = typeof value === "object" ? value.toDate?.() : new Date(value);
+  return date && !Number.isNaN(date.getTime())
+    ? new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" }).format(date)
+    : "—";
+}
+function rolesOf(user: AppUser) {
+  return user.roles?.filter(Boolean) ?? (user.role ? [user.role] : user.userType ? [user.userType] : []);
+}
+function planOf(user: AppUser) {
+  if (user.isPaid === true) return user.paidPlan || "Paid";
+  if (user.subscriptionActive || user.hasSubscription || user.subscription === "paid") return "Paid";
+  return "Free";
+}
+function statusOf(user: AppUser): "active" | "suspended" | "banned" {
+  return user.accountStatus ?? "active";
+}
+
+const STATUS_STYLE: Record<string, string> = {
+  active: "bg-good/12 text-good border-good/25",
+  suspended: "bg-warn/12 text-warn border-warn/25",
+  banned: "bg-crit/12 text-crit border-crit/25",
+};
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span className={cn("inline-flex items-center gap-1.5 text-[11.5px] font-semibold capitalize px-2 py-0.5 rounded-full border", STATUS_STYLE[status] ?? STATUS_STYLE.active)}>
+      <span className={cn("w-1.5 h-1.5 rounded-full", status === "active" ? "bg-good" : status === "suspended" ? "bg-warn" : "bg-crit")} />
+      {status}
+    </span>
+  );
+}
+
+export default function UsersPage() {
+  const { effectiveRole } = useAdminUi();
+  const { data: users, loading, error, hasMore, nextPage, firstPage } = usePaginatedCollection<AppUser>("usersData");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [planFilter, setPlanFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const visibleUsers = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return users.filter((user) => {
+      const matchesSearch = !needle || [userName(user), user.email, user.username, ...rolesOf(user), user.id]
+        .filter(Boolean).some((value) => String(value).toLowerCase().includes(needle));
+      const matchesRole = roleFilter === "all" || rolesOf(user).some((role) => role.toLowerCase() === roleFilter);
+      const matchesPlan = planFilter === "all" || planOf(user).toLowerCase() === planFilter;
+      const matchesStatus = statusFilter === "all" || statusOf(user) === statusFilter;
+      return matchesSearch && matchesRole && matchesPlan && matchesStatus;
+    });
+  }, [planFilter, roleFilter, search, statusFilter, users]);
+
+  if (!can(effectiveRole, "users")) return <NoAccess />;
+
+  async function goNext() { await nextPage(); setPage((v) => v + 1); }
+  async function goFirst() { await firstPage(); setPage(1); }
+
+  return (
+    <div className="flex flex-col gap-4 pb-10">
+      <PageHeader
+        title="Users"
+        sub="Live app-user records from usersData"
+        action={<button className={btnGhost} onClick={goFirst} disabled={loading}><RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /> Refresh</button>}
+      />
+
+      <div className="card !p-0 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-line">
+          <div className="flex items-center gap-2 bg-surface2 border border-line rounded-[10px] px-3 py-2 w-full max-w-[340px] focus-within:border-accent/50 transition-colors">
+            <Search className="w-4 h-4 text-ink3" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search name, email or ID on this page…"
+              className="bg-transparent outline-none text-[13px] w-full placeholder:text-ink3"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Filter value={roleFilter} onChange={setRoleFilter} label="Role" options={[["listener", "Listener"], ["artist", "Artist"], ["organizer", "Organizer"], ["venue", "Venue"]]} />
+            <Filter value={planFilter} onChange={setPlanFilter} label="Plan" options={[["paid", "Paid"], ["free", "Free"]]} />
+            <Filter value={statusFilter} onChange={setStatusFilter} label="Status" options={[["active", "Active"], ["suspended", "Suspended"], ["banned", "Banned"]]} />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-ink3"><Loader2 className="w-5 h-5 animate-spin" /></div>
+        ) : error ? (
+          <div className="px-4 py-14 text-center text-[13px] text-crit">Could not load usersData. Confirm the Firestore rules grant admins read access to this collection.</div>
+        ) : visibleUsers.length === 0 ? (
+          <EmptyState icon={Users} title={search ? "No users match that search" : "No users found"} sub={search ? "Search only applies to the current page." : "usersData does not contain any records yet."} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px] border-separate border-spacing-0">
+              <thead>
+                <tr className="text-left text-[10.5px] uppercase tracking-wide text-ink3">
+                  <th className="px-4 py-2.5 font-semibold border-b border-line">User</th>
+                  <th className="px-4 py-2.5 font-semibold border-b border-line">Email</th>
+                  <th className="px-4 py-2.5 font-semibold border-b border-line">Role</th>
+                  <th className="px-4 py-2.5 font-semibold border-b border-line">Plan</th>
+                  <th className="px-4 py-2.5 font-semibold border-b border-line">Status</th>
+                  <th className="px-4 py-2.5 font-semibold border-b border-line whitespace-nowrap">Joined</th>
+                  <th className="px-4 py-2.5 font-semibold border-b border-line w-[44px]" />
+                </tr>
+              </thead>
+              <tbody>
+                {visibleUsers.map((user) => {
+                  const name = userName(user);
+                  const image = userImage(user);
+                  const role = rolesOf(user)[0];
+                  const plan = planOf(user);
+                  return (
+                    <tr key={user.id} className="group hover:bg-surface2/50 transition-colors">
+                      <td className="px-4 py-2.5 border-b border-line/70">
+                        <Link href={`/users/detail?id=${encodeURIComponent(user.id)}`} className="flex items-center gap-3 min-w-[200px]">
+                          {image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={image} alt="" className="w-9 h-9 rounded-full object-cover bg-surface3 ring-1 ring-line shrink-0" />
+                          ) : <div className="w-9 h-9 rounded-full bg-accent/15 text-accent grid place-items-center font-bold text-[12px] ring-1 ring-line shrink-0">{name.slice(0, 2).toUpperCase()}</div>}
+                          <div className="min-w-0">
+                            <div className="font-semibold truncate max-w-[190px] group-hover:text-accent transition-colors">{name}</div>
+                            {user.username && <div className="text-[11px] text-ink3 truncate max-w-[190px]">@{user.username}</div>}
+                          </div>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-2.5 border-b border-line/70 text-ink2 max-w-[220px] truncate">{user.email || "—"}</td>
+                      <td className="px-4 py-2.5 border-b border-line/70 text-ink2 capitalize">{role || "—"}</td>
+                      <td className="px-4 py-2.5 border-b border-line/70"><span className={cn("pill", plan === "Free" ? "" : "!bg-good/15 !text-good")}>{plan}</span></td>
+                      <td className="px-4 py-2.5 border-b border-line/70"><StatusBadge status={statusOf(user)} /></td>
+                      <td className="px-4 py-2.5 border-b border-line/70 text-ink2 whitespace-nowrap">{displayDate(user.createdAt)}</td>
+                      <td className="px-4 py-2.5 border-b border-line/70">
+                        <Link href={`/users/detail?id=${encodeURIComponent(user.id)}`} className="w-8 h-8 grid place-items-center rounded-[9px] text-ink3 hover:bg-surface3 hover:text-ink transition-colors" title={`View ${name}`}>
+                          <Chevron className="w-4 h-4" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-line">
+          <span className="text-[12px] text-ink3">Page {page} · {visibleUsers.length} shown · up to 50 per page</span>
+          <div className="flex items-center gap-2">
+            <button className={cn(btnGhost, "!px-3")} onClick={goFirst} disabled={loading || page === 1}><ChevronLeft className="w-4 h-4" /> First</button>
+            <button className={cn(btnGhost, "!px-3")} onClick={goNext} disabled={loading || !hasMore}>Next <ChevronRight className="w-4 h-4" /></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Filter({ value, onChange, label, options }: { value: string; onChange: (value: string) => void; label: string; options: string[][] }) {
+  return (
+    <select
+      aria-label={label}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={cn("bg-surface2 border rounded-[10px] px-2.5 py-2 text-[12px] outline-none transition-colors", value === "all" ? "border-line text-ink2" : "border-accent/40 text-ink")}
+    >
+      <option value="all">{label}: All</option>
+      {options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}
+    </select>
+  );
+}

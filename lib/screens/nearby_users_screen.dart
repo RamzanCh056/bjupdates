@@ -4,6 +4,8 @@ import 'package:beatjerky/screens/messages_screen.dart';
 import 'package:beatjerky/screens/view_user_profile_screen.dart';
 import 'package:beatjerky/services/chat_service.dart';
 import 'package:beatjerky/services/nearby_users_service.dart';
+import 'package:beatjerky/utils/app_toast.dart';
+import 'package:beatjerky/utils/role_utils.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -50,6 +52,11 @@ class _NearbyUsersScreenState extends State<NearbyUsersScreen>
   _NearbyTab _tab = _NearbyTab.nearby;
   double _radiusKm = 10;
   NearbyGenderFilter _gender = NearbyGenderFilter.all;
+  String _role = '';
+  final TextEditingController _postalController = TextEditingController();
+  List<double>? _center; // [lat, lng] from a geocoded postal code
+  String? _centerLabel;
+  bool _geocoding = false;
   NearbyUsersResult? _result;
   bool _loading = true;
   int _listGeneration = 0;
@@ -86,6 +93,7 @@ class _NearbyUsersScreenState extends State<NearbyUsersScreen>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _radiusRevealController.dispose();
+    _postalController.dispose();
     super.dispose();
   }
 
@@ -112,12 +120,24 @@ class _NearbyUsersScreenState extends State<NearbyUsersScreen>
 
     final NearbyUsersResult result;
     if (_tab == _NearbyTab.all) {
-      result = await NearbyUsersService.fetchAll(gender: _gender);
+      result = await NearbyUsersService.fetchAll(
+        gender: _gender,
+        roleFilter: _role,
+      );
+    } else if (_center != null) {
+      result = await NearbyUsersService.fetchNearbyAt(
+        lat: _center![0],
+        lng: _center![1],
+        radiusKm: _radiusKm,
+        gender: _gender,
+        roleFilter: _role,
+      );
     } else {
       result = await NearbyUsersService.fetchNearby(
         radiusKm: _radiusKm,
         refreshLocation: refresh,
         gender: _gender,
+        roleFilter: _role,
       );
     }
 
@@ -127,6 +147,45 @@ class _NearbyUsersScreenState extends State<NearbyUsersScreen>
         _loading = false;
       });
     }
+  }
+
+  void _onRoleSelected(String role) {
+    if (_role == role) return;
+    setState(() => _role = role);
+    _load();
+  }
+
+  Future<void> _searchPostal() async {
+    final q = _postalController.text.trim();
+    if (q.isEmpty) {
+      _clearCenter();
+      return;
+    }
+    FocusScope.of(context).unfocus();
+    setState(() => _geocoding = true);
+    final center = await NearbyUsersService.geocodePostalCode(q);
+    if (!mounted) return;
+    if (center == null) {
+      setState(() => _geocoding = false);
+      AppToast.show('Could not find that postal code', isError: true);
+      return;
+    }
+    setState(() {
+      _center = center;
+      _centerLabel = q;
+      _geocoding = false;
+    });
+    _load();
+  }
+
+  void _clearCenter() {
+    if (_center == null && _postalController.text.isEmpty) return;
+    _postalController.clear();
+    setState(() {
+      _center = null;
+      _centerLabel = null;
+    });
+    _load(refresh: true);
   }
 
   Future<void> _enableLocation() async {
@@ -256,6 +315,17 @@ class _NearbyUsersScreenState extends State<NearbyUsersScreen>
                                       _load();
                                     },
                                   ),
+                                ),
+                                _ProSearchBar(
+                                  role: _role,
+                                  onRoleSelected: _onRoleSelected,
+                                  showPostal: _tab == _NearbyTab.nearby,
+                                  postalController: _postalController,
+                                  geocoding: _geocoding,
+                                  centerLabel:
+                                      _center == null ? null : _centerLabel,
+                                  onPostalSearch: _searchPostal,
+                                  onClearCenter: _clearCenter,
                                 ),
                                 const SizedBox(height: 12),
                                 _ResultsBadge(label: _resultsLabel, loading: _loading),
@@ -1679,6 +1749,169 @@ class NearbyUsersHomeSection extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Professional search bar: role filter + postal-code area search
+// ---------------------------------------------------------------------------
+
+class _ProSearchBar extends StatelessWidget {
+  final String role;
+  final ValueChanged<String> onRoleSelected;
+  final bool showPostal;
+  final TextEditingController postalController;
+  final bool geocoding;
+  final String? centerLabel;
+  final VoidCallback onPostalSearch;
+  final VoidCallback onClearCenter;
+
+  const _ProSearchBar({
+    required this.role,
+    required this.onRoleSelected,
+    required this.showPostal,
+    required this.postalController,
+    required this.geocoding,
+    required this.centerLabel,
+    required this.onPostalSearch,
+    required this.onClearCenter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 14),
+        _FilterLabel(icon: Icons.work_outline_rounded, text: 'Role'),
+        const SizedBox(height: 10),
+        _FilterChipRow(
+          children: [
+            _FilterChip(
+              label: 'All',
+              selected: role.isEmpty,
+              onTap: () => onRoleSelected(''),
+            ),
+            for (final r in allRoles)
+              _FilterChip(
+                label: roleDisplayLabel(r),
+                selected: role == r,
+                onTap: () => onRoleSelected(r),
+              ),
+          ],
+        ),
+        if (showPostal) ...[
+          const SizedBox(height: 14),
+          _FilterLabel(
+              icon: Icons.location_on_rounded, text: 'Search area'),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 44,
+                  child: TextField(
+                    controller: postalController,
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
+                    textInputAction: TextInputAction.search,
+                    onSubmitted: (_) => onPostalSearch(),
+                    decoration: InputDecoration(
+                      hintText: 'Postal code or city',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.4),
+                        fontSize: 14,
+                      ),
+                      prefixIcon: Icon(Icons.search,
+                          color: Colors.white.withValues(alpha: 0.4),
+                          size: 20),
+                      filled: true,
+                      fillColor: _surface,
+                      isDense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 10),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide:
+                            BorderSide(color: _accent.withValues(alpha: 0.6)),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              GestureDetector(
+                onTap: geocoding ? null : onPostalSearch,
+                child: Container(
+                  height: 44,
+                  width: 52,
+                  decoration: BoxDecoration(
+                    color: _accent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Center(
+                    child: geocoding
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Icon(Icons.arrow_forward_rounded,
+                            color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (centerLabel != null) ...[
+            const SizedBox(height: 10),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: onClearCenter,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: _accent.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(20),
+                    border:
+                        Border.all(color: _accent.withValues(alpha: 0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.place,
+                          color: _accentLight, size: 15),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Near $centerLabel',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.close,
+                          color: Colors.white54, size: 15),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ],
     );
   }
 }

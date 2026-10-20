@@ -1,0 +1,43 @@
+import type { Scope } from "@/lib/rbac";
+
+export type NavMeta = { href: string; title: string; sub: string; scope: Scope };
+
+/** Single source of truth for page titles + the top-bar quick search. */
+export const NAV: NavMeta[] = [
+  { href: "/dashboard", title: "Dashboard", sub: "Platform overview", scope: "dashboard" },
+
+  // People
+  { href: "/users/detail", title: "User profile", sub: "App account detail", scope: "users" },
+  { href: "/users", title: "Users", sub: "App user accounts", scope: "users" },
+  { href: "/artists", title: "Artists", sub: "Artist & band profiles", scope: "users" },
+  { href: "/venues", title: "Venues & Stores", sub: "Storefronts & their items", scope: "users" },
+
+  // Content
+  { href: "/content", title: "Posts & Reels", sub: "User content moderation", scope: "content" },
+  { href: "/stories", title: "Stories", sub: "Live stories (auto-expire 24h)", scope: "content" },
+  { href: "/music", title: "Songs & Tracks", sub: "Music catalog", scope: "music" },
+  { href: "/events", title: "Events", sub: "User-created events", scope: "events" },
+
+  // Engagement
+  { href: "/gamification", title: "Gamification", sub: "Points, streaks & achievements", scope: "gamification" },
+  { href: "/notifications", title: "Notifications", sub: "Broadcast & direct messages", scope: "notifications" },
+
+  // Musician Career
+  { href: "/musicians", title: "Musicians", sub: "Registered musician profiles", scope: "forms" },
+  { href: "/forms", title: "Form Builder", sub: "Dynamic form templates", scope: "forms" },
+  { href: "/submissions", title: "Submissions", sub: "Review & approve musician forms", scope: "forms" },
+  { href: "/gigs", title: "Gigs", sub: "Bookings & assignments", scope: "gigs" },
+  { href: "/payments", title: "Payments", sub: "Musician payouts & invoices", scope: "payments" },
+  { href: "/documents", title: "Documents", sub: "Musician files & media", scope: "documents" },
+
+  // System
+  { href: "/admins", title: "Admins", sub: "Admin accounts & roles", scope: "system" },
+];
+
+/** Longest-prefix match so /users/detail wins over /users, etc. */
+export function metaFor(pathname: string): { title: string; sub: string } {
+  const match = [...NAV]
+    .sort((a, b) => b.href.length - a.href.length)
+    .find((n) => pathname === n.href || pathname.startsWith(n.href + "/"));
+  return match ? { title: match.title, sub: match.sub } : { title: "Dashboard", sub: "Platform overview" };
+}

@@ -3,6 +3,7 @@ import 'package:beatjerky/utils/color.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'user_badges.dart';
 
 /// Shared comment bottom sheet widget that can be used for both feed posts and reels
 class SharedCommentBottomSheet extends StatefulWidget {
@@ -265,6 +266,10 @@ class _SharedCommentBottomSheetState extends State<SharedCommentBottomSheet> {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                    if (uid.isNotEmpty) ...[
+                      const SizedBox(width: 4),
+                      UserBadges(uid: uid, size: 13),
+                    ],
                     if (ago.isNotEmpty) ...[
                       const SizedBox(width: 4),
                       Text(

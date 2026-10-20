@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BeatJerky Badge Designs</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: two option galleries (verified / premium) on an app-dark canvas,
+     each option shown large + in three real app contexts. */
+  :root{
+    --bg:#0A0E27; --surface:#121a38; --surface2:#1a2446; --line:rgba(255,255,255,.10);
+    --ink:#F4F6FF; --ink2:#AEB6DC; --ink3:#727aa3;
+    --accent:#BB86FC; --blue:#3B9EFF; --teal:#16C7B5;
+    --gold-a:#FBD36B; --gold-b:#DF9A24;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Plus Jakarta Sans",system-ui,-apple-system,sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding:clamp(20px,4vw,40px) max(16px,env(safe-area-inset-left,0px)) 64px max(16px,env(safe-area-inset-right,0px));
+  }
+  .wrap{max-width:1000px;margin:0 auto}
+  h1{font-family:"Sora",sans-serif;font-weight:700;font-size:clamp(24px,5vw,34px);margin:0;letter-spacing:-.02em;text-wrap:balance}
+  .lede{color:var(--ink2);margin:10px 0 0;max-width:62ch;font-size:15px}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+  h2{font-family:"Sora",sans-serif;font-weight:600;font-size:19px;margin:4px 0 0;letter-spacing:-.01em}
+  .sub{color:var(--ink2);font-size:13.5px;margin:3px 0 0}
+  section{margin-top:40px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.03em}
+  .pill.v{background:rgba(59,158,255,.16);color:#8fc6ff}
+  .pill.p{background:rgba(223,154,36,.18);color:var(--gold-a)}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  .card{
+    background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px;
+    display:flex;flex-direction:column;gap:16px;cursor:pointer;transition:border-color .15s,transform .15s,background .15s;position:relative;
+  }
+  .card:hover{border-color:rgba(255,255,255,.22)}
+  .card.sel{border-color:var(--accent);background:#161e40;box-shadow:0 0 0 1px var(--accent)}
+  .card .tick{position:absolute;top:12px;right:12px;width:22px;height:22px;border-radius:999px;border:1.5px solid var(--line);display:grid;place-items:center;color:transparent;font-size:12px;font-weight:800}
+  .card.sel .tick{background:var(--accent);border-color:var(--accent);color:#1a1033}
+  .opt-label{font-size:12px;font-weight:700;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase}
+  .hero{display:flex;align-items:center;gap:14px}
+  .hero .name{font-family:"Sora",sans-serif;font-weight:600;font-size:15px}
+  .hero .cap{font-size:12px;color:var(--ink3);margin-top:1px}
+  .ctx{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--line);padding-top:14px}
+  .ctx-row{display:flex;align-items:center;gap:10px}
+  .ctx-row .lab{font-size:10.5px;color:var(--ink3);width:62px;flex:none;letter-spacing:.03em;text-transform:uppercase}
+  .nameline{display:flex;align-items:center;gap:7px;min-width:0}
+  .nameline .nm{font-weight:600;font-size:13.5px;white-space:nowrap}
+  .av{border-radius:999px;background:linear-gradient(135deg,#7c3aed,#a855f7);display:grid;place-items:center;color:#fff;font-weight:700;flex:none;position:relative;overflow:visible;font-family:"Sora",sans-serif}
+  .av .ov{position:absolute;right:-2px;bottom:-2px;border-radius:999px;background:var(--surface);padding:1.5px;display:grid;place-items:center}
+  .lead{display:flex;align-items:center;gap:10px;background:var(--surface2);border-radius:12px;padding:8px 10px}
+  .lead .rk{font-family:"Sora";font-weight:700;color:var(--ink3);font-size:13px;width:16px}
+  .lead .nm{font-weight:600;font-size:13px}
+  .lead .pts{margin-left:auto;font-weight:700;font-size:12px;color:var(--ink2)}
+  .note{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;color:var(--ink2);font-size:13.5px}
+  .note b{color:var(--ink)}
+  .together{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .summary{position:sticky;bottom:12px;margin-top:34px;background:rgba(18,26,56,.86);backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13.5px}
+  .summary .k{color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  .summary .val{font-weight:700;color:var(--accent)}
+  svg{display:block}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FCE08A"/><stop offset=".5" stop-color="#F3B33F"/><stop offset="1" stop-color="#C8831A"/>
+  </linearGradient>
+  <linearGradient id="goldsheen" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".4" stop-color="#fff" stop-opacity="0"/>
+  </linearGradient>
+</defs></svg>
+
+<div class="wrap">
+  <div class="eyebrow">BeatJerky · verification</div>
+  <h1>Two badges, two meanings</h1>
+  <p class="lede">The <b>Verified</b> badge is earned by admin approval (identity / proof). The <b>Premium</b> badge comes with a paid subscription. Pick one design for each — tap a card to choose. A user can hold both at once.</p>
+
+  <section id="verified">
+    <div class="sec-head">
+      <span class="pill v">✓ VERIFIED</span>
+      <div><h2>Simple — admin approved</h2><p class="sub">Clean, trustworthy. Shown after an admin approves the request.</p></div>
+    </div>
+    <div class="grid" id="verified-grid"></div>
+  </section>
+
+  <section id="premium">
+    <div class="sec-head">
+      <span class="pill p">★ PREMIUM</span>
+      <div><h2>Premium — paid</h2><p class="sub">A richer, gold treatment. Shown while the subscription is active.</p></div>
+    </div>
+    <div class="grid" id="premium-grid"></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><div><h2>Both together</h2><p class="sub">How a user who is verified <i>and</i> premium would look.</p></div></div>
+    <div class="note together" id="together"></div>
+  </section>
+
+  <div class="summary">
+    <span><span class="k">Your pick</span></span>
+    <span>Verified: <span class="val" id="pick-v">Option 1</span></span>
+    <span>Premium: <span class="val" id="pick-p">Option 1</span></span>
+    <span style="color:var(--ink3);font-size:12px">Tell me the two option numbers and I’ll build them.</span>
+  </div>
+</div>
+
+<script>
+  // ---- badge generator ----------------------------------------------------
+  function sealPath(cx,cy,rO,rI,lobes){
+    const steps=lobes*14, p=[];
+    for(let i=0;i<=steps;i++){
+      const t=i/steps*Math.PI*2;
+      const r=rI+(rO-rI)*(0.5+0.5*Math.cos(lobes*t));
+      p.push((cx+r*Math.cos(t)).toFixed(2)+' '+(cy+r*Math.sin(t)).toFixed(2));
+    }
+    return 'M'+p.join(' L')+' Z';
+  }
+  const STAR='M12 3.6l2.42 4.9 5.41.79-3.92 3.82.93 5.39L12 15.96 7.16 18.5l.93-5.39L4.17 9.29l5.41-.79z';
+  const CROWN='M4 8.5l3.4 2.3L12 5.2l4.6 5.6L20 8.5l-1.3 8.1H5.3zM5 18.2h14v1.8H5z';
+
+  function badge(opts, size){
+    const {shape,fill,icon,ic='#fff'}=opts;
+    const shapeEl = shape==='seal'
+      ? `<path d="${sealPath(12,12,11.7,9.1,12)}" fill="${fill}"/>`
+      : `<circle cx="12" cy="12" r="11.2" fill="${fill}"/>`;
+    let g='';
+    if(icon==='check') g=`<path d="M7 12.4l3.1 3.1L17.2 8.3" fill="none" stroke="${ic}" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/>`;
+    else if(icon==='star') g=`<path d="${STAR}" fill="${ic}"/>`;
+    else if(icon==='crown') g=`<path d="${CROWN}" fill="${ic}"/>`;
+    const sheen = fill.indexOf('gold')>-1 ? `<ellipse cx="9" cy="7.5" rx="7" ry="4.5" fill="url(#goldsheen)"/>` : '';
+    return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${shapeEl}${sheen}${g}</svg>`;
+  }
+
+  const VERIFIED=[
+    {label:'Blue circle', shape:'circle', fill:'var(--blue)', icon:'check'},
+    {label:'Blue seal',   shape:'seal',   fill:'var(--blue)', icon:'check'},
+    {label:'Teal circle', shape:'circle', fill:'var(--teal)', icon:'check'},
+  ];
+  const PREMIUM=[
+    {label:'Gold seal · check', shape:'seal',   fill:'url(#gold)', icon:'check'},
+    {label:'Gold · star',       shape:'circle', fill:'url(#gold)', icon:'star'},
+    {label:'Gold · crown',      shape:'circle', fill:'url(#gold)', icon:'crown'},
+  ];
+
+  function av(size,label,badgeOpts,badgeSize){
+    const ov = badgeOpts ? `<span class="ov">${badge(badgeOpts,badgeSize)}</span>` : '';
+    return `<span class="av" style="width:${size}px;height:${size}px;font-size:${size*0.4}px">${label}${ov}</span>`;
+  }
+
+  function card(opts,i,kind){
+    const el=document.createElement('div');
+    el.className='card'+(i===0?' sel':'');
+    el.dataset.kind=kind; el.dataset.idx=i;
+    el.innerHTML=`
+      <div class="tick">✓</div>
+      <div class="opt-label">Option ${i+1} · ${opts.label}</div>
+      <div class="hero">
+        ${badge(opts,54)}
+        <div><div class="name">${opts.shape==='seal'?'Seal':'Round'} mark</div><div class="cap">as it reads up close</div></div>
+      </div>
+      <div class="ctx">
+        <div class="ctx-row">
+          <span class="lab">Name</span>
+          <span class="nameline">${av(26,'R')}<span class="nm">Ramzan</span>${badge(opts,16)}</span>
+        </div>
+        <div class="ctx-row">
+          <span class="lab">Avatar</span>
+          ${av(48,'R',opts,20)}
+        </div>
+        <div class="ctx-row">
+          <span class="lab">List</span>
+          <span class="lead" style="flex:1;min-width:0">
+            <span class="rk">1</span>${av(24,'R')}<span class="nameline"><span class="nm">Ramzan</span>${badge(opts,15)}</span><span class="pts">2,480</span>
+          </span>
+        </div>
+      </div>`;
+    el.addEventListener('click',()=>{
+      document.querySelectorAll('.card[data-kind="'+kind+'"]').forEach(c=>c.classList.remove('sel'));
+      el.classList.add('sel');
+      document.getElementById('pick-'+(kind==='verified'?'v':'p')).textContent='Option '+(i+1);
+      renderTogether();
+    });
+    return el;
+  }
+
+  const vg=document.getElementById('verified-grid'), pg=document.getElementById('premium-grid');
+  VERIFIED.forEach((o,i)=>vg.appendChild(card(o,i,'verified')));
+  PREMIUM.forEach((o,i)=>pg.appendChild(card(o,i,'premium')));
+
+  function sel(kind){ const c=document.querySelector('.card.sel[data-kind="'+kind+'"]'); return (kind==='verified'?VERIFIED:PREMIUM)[c?+c.dataset.idx:0]; }
+  function renderTogether(){
+    const v=sel('verified'), p=sel('premium');
+    document.getElementById('together').innerHTML=
+      `<span class="av" style="width:56px;height:56px;font-size:22px">R`+
+      `<span class="ov">${badge(p,22)}</span></span>`+
+      `<span class="nameline" style="gap:8px"><span class="nm" style="font-size:16px;font-family:Sora">Ramzan</span>${badge(v,18)}${badge(p,18)}</span>`+
+      `<span style="color:var(--ink3);font-size:12.5px;margin-left:4px">verified identity + premium member</span>`;
+  }
+  renderTogether();
+</script>
+</body>
+</html>

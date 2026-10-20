@@ -1,4 +1,5 @@
 import 'package:beatjerky/providers/user_provider.dart';
+import 'package:beatjerky/screens/edit_pro_profile_screen.dart';
 import 'package:beatjerky/utils/app_toast.dart';
 import 'package:beatjerky/utils/color.dart';
 import 'package:beatjerky/utils/role_utils.dart';
@@ -32,7 +33,8 @@ class RoleSwitcherChip extends StatelessWidget {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.swap_horiz, size: 16, color: recntsColor),
+              Icon(roleIcon(effectiveRoles.isNotEmpty ? effectiveRoles.first : ''),
+                  size: 16, color: recntsColor),
               const SizedBox(width: 6),
               Text(
                 effectiveLabel,
@@ -55,12 +57,16 @@ class RoleSwitcherChip extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(ctx).size.height * 0.75,
+        ),
         decoration: const BoxDecoration(
           color: Color(0xFF1F1F1F),
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.only(top: 20, bottom: 12),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -68,7 +74,7 @@ class RoleSwitcherChip extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 20),
               child: Text(
-                'View as role',
+                'Choose your role',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -76,40 +82,122 @@ class RoleSwitcherChip extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            ...const [
-              RoleKeys.listener,
-              RoleKeys.artist,
-              RoleKeys.organizer,
-              RoleKeys.venue,
-            ].map((role) {
-              final isActive =
-                  provider.effectiveRoles.isNotEmpty &&
-                  provider.effectiveRoles.first == role;
-              return ListTile(
-                title: Text(
-                  roleDisplayLabel(role),
-                  style: const TextStyle(color: Colors.white),
+            const SizedBox(height: 8),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _groupHeader('Individual'),
+                    ...individualRoles
+                        .map((r) => _roleTile(context, ctx, provider, r)),
+                    _groupHeader('Organization'),
+                    ...organizationRoles
+                        .map((r) => _roleTile(context, ctx, provider, r)),
+                  ],
                 ),
-                leading: Icon(
-                  Icons.person,
-                  color: isActive ? recntsColor : Colors.white24,
-                ),
-                onTap: () async {
-                  final ok = await provider.switchRoleAndPersist(role);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  if (!ok) {
-                    AppToast.show(
-                      'Unable to switch role. Try again.',
-                      isError: true,
-                    );
-                  }
-                },
-              );
-            }),
+              ),
+            ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _groupHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          color: Colors.white.withOpacity(0.5),
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.6,
+        ),
+      ),
+    );
+  }
+
+  Widget _roleTile(BuildContext pageContext, BuildContext sheetContext,
+      UserStatusProvider provider, String role) {
+    final isActive = provider.effectiveRoles.isNotEmpty &&
+        provider.effectiveRoles.first == role;
+    return ListTile(
+      dense: true,
+      title: Text(
+        roleDisplayLabel(role),
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+        ),
+      ),
+      leading: Icon(
+        roleIcon(role),
+        color: isActive ? recntsColor : Colors.white30,
+      ),
+      trailing: isActive
+          ? Icon(Icons.check_circle, color: recntsColor, size: 20)
+          : null,
+      onTap: () async {
+        if (isActive) {
+          if (sheetContext.mounted) Navigator.pop(sheetContext);
+          return;
+        }
+
+        if (provider.hasProProfileForRole(role)) {
+          // Already set up for this role before — switch straight away.
+          final ok = await provider.switchRoleAndPersist(role);
+          if (sheetContext.mounted) Navigator.pop(sheetContext);
+          if (!ok) {
+            AppToast.show('Unable to switch role. Try again.', isError: true);
+          }
+          return;
+        }
+
+        // New role: build its professional profile first; the switch
+        // itself completes only once that profile is saved.
+        if (sheetContext.mounted) Navigator.pop(sheetContext);
+        if (pageContext.mounted) {
+          Navigator.push(
+            pageContext,
+            MaterialPageRoute(
+              builder: (_) => EditProProfileScreen(initialRole: role),
+            ),
+          );
+        }
+      },
+    );
+  }
+}
+
+/// Icon for a role (UI only).
+IconData roleIcon(String role) {
+  switch (role) {
+    case RoleKeys.listener:
+      return Icons.headphones;
+    case RoleKeys.artist:
+      return Icons.music_note;
+    case RoleKeys.dj:
+      return Icons.album;
+    case RoleKeys.band:
+      return Icons.groups;
+    case RoleKeys.technician:
+      return Icons.build;
+    case RoleKeys.organizer:
+      return Icons.event;
+    case RoleKeys.venue:
+      return Icons.location_city;
+    case RoleKeys.agency:
+      return Icons.business_center;
+    case RoleKeys.studio:
+      return Icons.graphic_eq;
+    case RoleKeys.label:
+      return Icons.library_music;
+    case RoleKeys.supplier:
+      return Icons.local_shipping;
+    default:
+      return Icons.person;
   }
 }

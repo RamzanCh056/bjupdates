@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/home_stats_service.dart';
 import '../utils/color.dart';
 import '../widgets/home/home_screen_widgets.dart';
+import '../widgets/upcoming_schedule_card.dart';
 import '../widgets/profile/upload_stats_graph.dart';
 
 class ProfessionalDashboardScreen extends StatefulWidget {
@@ -80,6 +81,8 @@ class _ProfessionalDashboardScreenState
                   reelsGrowth: '${HomeStatsService.delta(d.reelsY)}',
                 ),
                 UploadStatsGraph(data: d),
+                const SizedBox(height: 16),
+                const UpcomingScheduleCard(),
                 const SizedBox(height: 24),
               ],
             ),

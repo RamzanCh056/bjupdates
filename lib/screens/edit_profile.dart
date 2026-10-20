@@ -8,6 +8,7 @@ import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/app_toast.dart';
 import '../utils/color.dart';
+import 'edit_pro_profile_screen.dart';
 
 const Color _surfaceBg = darkBackgroundPrimary;
 const Color _textMuted = Color(0xFFB0B0B0);
@@ -359,6 +360,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ),
                   const SizedBox(height: 28),
 
+                  // Professional profile entry
+                  _sectionHeader('Professional profile'),
+                  const SizedBox(height: 12),
+                  _proProfileEntry(),
+                  const SizedBox(height: 28),
+
                   // Password section
                   _sectionHeader('Change password'),
                   Padding(
@@ -438,6 +445,49 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _proProfileEntry() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EditProProfileScreen()),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: _surfaceBg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06), width: 1),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.badge_outlined, color: Colors.white70),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Professional profile',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15)),
+                    SizedBox(height: 2),
+                    Text('Your role details, location, contact & links',
+                        style: TextStyle(color: _textMuted, fontSize: 12.5)),
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white38),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../opportunities/create_opportunity_screen.dart';
 
 import 'package:beatjerky/utils/app_toast.dart';
 import 'package:beatjerky/utils/color.dart';
@@ -815,7 +816,96 @@ class EventCard extends StatelessWidget {
                           ),
                           const SizedBox(height: 6),
                           _infoText(Icons.calendar_today, 'Date', event.date),
+                          if (event.budget != null) ...[
+                            const SizedBox(height: 6),
+                            _infoText(
+                              Icons.attach_money,
+                              'Budget',
+                              event.budget.toString(),
+                            ),
+                          ],
+                          if (event.attendance != null) ...[
+                            const SizedBox(height: 6),
+                            _infoText(
+                              Icons.groups,
+                              'Expected attendance',
+                              event.attendance.toString(),
+                            ),
+                          ],
+                          if (event.staffNeeded.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            _infoText(
+                              Icons.badge,
+                              'Staff needed',
+                              event.staffNeeded.join(', '),
+                            ),
+                          ],
+                          if (event.suppliers.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            _infoText(
+                              Icons.local_shipping,
+                              'Suppliers',
+                              event.suppliers.join(', '),
+                            ),
+                          ],
+                          if (event.permits.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            _infoText(
+                              Icons.verified_user,
+                              'Permits',
+                              event.permits.join(', '),
+                            ),
+                          ],
+                          if ((event.notes ?? '').trim().isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            _infoText(
+                              Icons.notes,
+                              'Notes',
+                              event.notes!.trim(),
+                            ),
+                          ],
                           const SizedBox(height: 12),
+
+                          if (_isOwner && _canEditOrDelete) ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => CreateOpportunityScreen(
+                                        eventId: event.id,
+                                        eventName: event.eventName,
+                                        prefillTitle:
+                                            'Staff for ${event.eventName}',
+                                        prefillDate:
+                                            DateTime.tryParse(event.date),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.campaign_outlined,
+                                    color: Colors.white, size: 18),
+                                label: const Text('Publish a search',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color(0xFFBB86FC).withOpacity(0.25),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    side: const BorderSide(
+                                        color: Color(0xFFBB86FC)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                          ],
 
                           // Show role badge if user is owner but cannot edit (no organizer/venue role)
                           if (_isOwner &&

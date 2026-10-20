@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../utils/pro_profile_utils.dart';
 import '../utils/role_utils.dart';
 
 class UserStatusProvider extends ChangeNotifier {
@@ -20,9 +21,19 @@ class UserStatusProvider extends ChangeNotifier {
   /// Normalized values: 'listener', 'artist', 'organizer', 'venue'.
   List<String> roles = [];
 
+  /// Admin-approved identity verification (blue-seal badge).
+  bool verified = false;
+
   /// When user has multiple roles, they can switch. This is the active role for UI/permissions.
   /// When null, all roles apply (default). When set, only this role's permissions apply.
   String? activeRole;
+
+  /// Saved professional profiles keyed by role, kept in sync from Firestore.
+  Map<String, Map<String, dynamic>> proProfiles = {};
+
+  /// Whether a professional profile already exists for [role].
+  bool hasProProfileForRole(String role) =>
+      proProfiles.containsKey(role.trim().toLowerCase());
 
   /// Effective roles for permission checks: [activeRole] if set and valid, else full [roles].
   List<String> get effectiveRoles {
@@ -49,13 +60,7 @@ class UserStatusProvider extends ChangeNotifier {
   /// This keeps signup single-role behavior while allowing dashboard switching.
   Future<bool> switchRoleAndPersist(String role) async {
     final normalized = role.trim().toLowerCase();
-    const allowed = {
-      RoleKeys.listener,
-      RoleKeys.artist,
-      RoleKeys.organizer,
-      RoleKeys.venue,
-    };
-    if (!allowed.contains(normalized)) return false;
+    if (!allRoles.contains(normalized)) return false;
 
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return false;
@@ -114,6 +119,7 @@ class UserStatusProvider extends ChangeNotifier {
       totalPoints = 0;
       roles = [];
       activeRole = null;
+      proProfiles = {};
       loading = false;
       notifyListeners();
       print(
@@ -150,6 +156,8 @@ class UserStatusProvider extends ChangeNotifier {
               isPaid = data['isPaid'] == true;
               paidPlan = (data['paidPlan'] as String?) ?? 'none';
               roles = parseRolesFromUserData(data);
+              verified = data['verified'] == true;
+              proProfiles = readProProfiles(data);
               if (activeRole != null && !roles.contains(activeRole)) {
                 activeRole = null;
               }
@@ -162,6 +170,8 @@ class UserStatusProvider extends ChangeNotifier {
               isPaid = false;
               paidPlan = 'none';
               roles = [];
+              verified = false;
+              proProfiles = {};
               print(
                 '💰 Subscription data reset to defaults - isPaid: $isPaid, paidPlan: $paidPlan, roles: $roles',
               );

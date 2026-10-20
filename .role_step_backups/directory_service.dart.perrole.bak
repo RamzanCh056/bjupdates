@@ -1,0 +1,47 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:beatjerky/models/directory_models.dart';
+import 'package:beatjerky/utils/debug_log.dart';
+
+/// Professional directory: browsable list of users who have a professional or
+/// organization role. Reads `usersData` and filters to professionals
+/// client-side (legacy docs may store role as a string, so no server query).
+class DirectoryService {
+  DirectoryService._();
+
+  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+
+  /// Live directory of professionals/organizations, sorted by name.
+  /// [roleFilter] (a role key) and [query] (name search) are optional; when
+  /// empty they are ignored.
+  static Stream<List<DirectoryEntry>> watchDirectory({
+    String? roleFilter,
+    String? query,
+  }) {
+    final role = (roleFilter ?? '').trim();
+    final q = (query ?? '').trim().toLowerCase();
+    final myUid = FirebaseAuth.instance.currentUser?.uid;
+
+    return _db
+        .collection('usersData')
+        .limit(400)
+        .snapshots()
+        .map((snap) {
+      final list = <DirectoryEntry>[];
+      for (final doc in snap.docs) {
+        final entry = DirectoryEntry.fromDoc(doc);
+        if (!entry.isProfessional) continue;
+        if (myUid != null && entry.uid == myUid) continue;
+        if (role.isNotEmpty && !entry.roles.contains(role)) continue;
+        if (q.isNotEmpty && !entry.name.toLowerCase().contains(q)) continue;
+        list.add(entry);
+      }
+      list.sort(
+          (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      return list;
+    }).handleError((Object e, StackTrace s) {
+      logDebugException('DirectoryService.watchDirectory', e, stackTrace: s);
+    });
+  }
+}

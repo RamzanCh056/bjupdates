@@ -1,4 +1,5 @@
 import 'package:beatjerky/screens/premium_plans/membership_history_screen.dart';
+import 'verification/get_verified_screen.dart';
 import 'package:beatjerky/utils/app_toast.dart';
 
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:beatjerky/utils/color.dart';
+import '../services/drive_service.dart';
 import 'auth_screen/login_screen.dart';
 import 'edit_profile.dart';
 import 'profile_screen.dart';
@@ -22,12 +24,65 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isPaid = false;
+  bool _verified = false;
   bool _loadingStatus = true;
+  bool _driveConnected = false;
 
   @override
   void initState() {
     super.initState();
     _loadPaidStatus();
+    _loadDriveStatus();
+  }
+
+  Future<void> _loadDriveStatus() async {
+    final connected = await DriveService.isConnected();
+    if (mounted) setState(() => _driveConnected = connected);
+  }
+
+  Future<void> _toggleDrive(BuildContext context) async {
+    if (_driveConnected) {
+      final shouldDisconnect = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: darkBackgroundPrimary,
+          title: const Text('Disconnect Google Drive?',
+              style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'You won\'t be able to save invoices and royalty statements to '
+            'Drive until you reconnect.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Disconnect',
+                  style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+      if (shouldDisconnect != true) return;
+      await DriveService.disconnect();
+      if (mounted) setState(() => _driveConnected = false);
+      if (context.mounted) AppToast.show('Disconnected from Google Drive');
+      return;
+    }
+
+    final ok = await DriveService.connect();
+    if (!mounted) return;
+    setState(() => _driveConnected = ok);
+    if (context.mounted) {
+      AppToast.show(
+        ok ? 'Connected to Google Drive' : 'Google sign-in cancelled',
+        isError: !ok,
+      );
+    }
   }
 
   Future<void> _loadPaidStatus() async {
@@ -42,6 +97,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final data = doc.data()!;
         setState(() {
           _isPaid = data['isPaid'] ?? false;
+          _verified = data['verified'] ?? false;
           _loadingStatus = false;
         });
       } else {
@@ -98,6 +154,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _buyBlueTick(BuildContext context) {
+    if (!_verified) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: darkBackgroundPrimary,
+          title: const Text('Get verified first',
+              style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Premium is available to verified members. Request the verified '
+            'badge first — once an admin approves it, you can subscribe.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Later',
+                  style: TextStyle(color: Colors.white54)),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GetVerifiedScreen()),
+                );
+              },
+              child: const Text('Get verified',
+                  style: TextStyle(color: Color(0xFFBB86FC))),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+    // Verified → proceed to the subscription flow.
     // Navigator.push(
     //   context,
     //   MaterialPageRoute(builder: (_) => const PremiumSubscriptionScreen()),
@@ -173,6 +264,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onTap: () => _goToEditProfile(context),
                 ),
                 const SizedBox(height: 28),
+                _sectionLabel('Verification'),
+                const SizedBox(height: 10),
+                _SettingsTile(
+                  icon: Icons.verified_rounded,
+                  iconBg: const Color(0xFF3B9EFF).withValues(alpha: 0.22),
+                  title: 'Get Verified',
+                  subtitle: 'Request the verified badge',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const GetVerifiedScreen(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                _sectionLabel('Storage'),
+                const SizedBox(height: 10),
+                _SettingsTile(
+                  icon: Icons.add_to_drive_rounded,
+                  iconBg: Colors.green.withValues(alpha: 0.2),
+                  title: 'Google Drive',
+                  subtitle: _driveConnected
+                      ? 'Connected · tap to disconnect'
+                      : 'Not connected · tap to connect',
+                  onTap: () => _toggleDrive(context),
+                ),
+                const SizedBox(height: 28),
                 _sectionLabel('Subscription'),
                 const SizedBox(height: 10),
                 _isPaid
@@ -194,7 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.workspace_premium_rounded,
                         iconBg: indigoColor.withValues(alpha: 0.25),
                         title: 'Get Premium',
-                        subtitle: 'Subscribe & get verified',
+                        subtitle: 'Unlock premium features',
                         onTap: () => _buyBlueTick(context),
                       ),
                 const SizedBox(height: 28),

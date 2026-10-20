@@ -1,0 +1,237 @@
+"use client";
+
+import { useMemo } from "react";
+import { useCollection } from "@/lib/firebase/hooks";
+
+/* ── field-tolerant document shapes ── */
+type Ts = { toDate?: () => Date } | number | string | undefined;
+type UserDoc = { id: string; roles?: string[]; role?: string; userType?: string; isPaid?: boolean; createdAt?: Ts };
+type Dated = { id: string; timestamp?: Ts; createdAt?: Ts; created_at?: Ts };
+type Musician = { id: string; primaryRole?: string };
+type Submission = { id: string; status?: string };
+type Gig = { id: string; title?: string; venue?: string; organizer?: string; startAt?: string; status?: string };
+type Report = { id: string };
+type LeaderRow = { id: string; name?: string; profileImage?: string; totalPoints?: number };
+type Audit = { id: string; actorName?: string; action?: string; module?: string; at?: number };
+
+type Tone = "crit" | "warn" | "info" | "good" | "accent";
+
+const DAY = 86400000;
+const HOUR = 3600000;
+
+/** Build a signups-vs-content series for the chart over the given window.
+ *  1 day → 24 hourly buckets; otherwise `days` daily buckets. */
+export function buildGrowthSeries(days: number, signupTimes: number[], contentTimes: number[]) {
+  const now = Date.now();
+  const count = (arr: number[], lo: number, hi: number) =>
+    arr.reduce((a, t) => a + (t >= lo && t < hi ? 1 : 0), 0);
+
+  if (days <= 1) {
+    const base = now - 24 * HOUR;
+    return Array.from({ length: 24 }, (_, i) => {
+      const lo = base + i * HOUR;
+      const hi = lo + HOUR;
+      return {
+        label: new Date(lo).toLocaleTimeString([], { hour: "numeric" }),
+        signups: count(signupTimes, lo, hi),
+        content: count(contentTimes, lo, hi),
+      };
+    });
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Array.from({ length: days }, (_, i) => {
+    const lo = today.getTime() - (days - 1 - i) * DAY;
+    const hi = lo + DAY;
+    return {
+      label: new Date(lo).toLocaleDateString([], { day: "numeric", month: "short" }),
+      signups: count(signupTimes, lo, hi),
+      content: count(contentTimes, lo, hi),
+    };
+  });
+}
+
+function toMs(v: Ts): number | null {
+  if (v == null) return null;
+  if (typeof v === "number") return v;
+  if (typeof v === "string") { const t = Date.parse(v); return Number.isNaN(t) ? null : t; }
+  if (typeof v === "object" && typeof v.toDate === "function") { const d = v.toDate(); return d ? d.getTime() : null; }
+  return null;
+}
+function contentMs(d: Dated): number | null {
+  return toMs(d.timestamp) ?? toMs(d.createdAt) ?? toMs(d.created_at);
+}
+function cap(s: string) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
+export function fmtK(v: number): string {
+  if (v >= 1000) return `${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;
+  return String(v);
+}
+function timeAgo(ms?: number): string {
+  if (!ms) return "";
+  const s = Math.max(1, Math.floor((Date.now() - ms) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60); if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24); return `${d}d ago`;
+}
+function activityTone(action: string): Tone {
+  const a = action.toLowerCase();
+  if (a.includes("delete") || a.includes("ban") || a.includes("suspend")) return "crit";
+  if (a.includes("broadcast") || a.includes("push") || a.includes("hide")) return "info";
+  if (a.includes("reinstate") || a.includes("approve")) return "good";
+  if (a.includes("admin")) return "accent";
+  return "warn";
+}
+
+const ROLE_META = [
+  { key: "listener", label: "Listeners", color: "#BB86FC", match: (r: string) => r.includes("listener") },
+  { key: "artist", label: "Artists", color: "#35D6C6", match: (r: string) => r.includes("artist") },
+  { key: "organizer", label: "Organizers", color: "#F6A623", match: (r: string) => r.includes("organiz") || r.includes("organis") },
+  { key: "venue", label: "Venues", color: "#3DDC84", match: (r: string) => r.includes("venue") || r.includes("business") },
+];
+const CONTENT_COLORS = ["#BB86FC", "#35D6C6", "#F6A623", "#3DDC84"];
+
+export function useDashboardData() {
+  const users = useCollection<UserDoc>("usersData");
+  const posts = useCollection<Dated>("posts");
+  const reels = useCollection<Dated>("reels");
+  const stories = useCollection<Dated>("stories");
+  const songs = useCollection<Dated>("songs");
+  const musicians = useCollection<Musician>("musicians");
+  const submissions = useCollection<Submission>("formSubmissions");
+  const gigs = useCollection<Gig>("gigs");
+  const reports = useCollection<Report>("reports");
+  const leaderboard = useCollection<LeaderRow>("leaderboard");
+  const audit = useCollection<Audit>("auditLog");
+
+  const loading =
+    users.loading || posts.loading || reels.loading || stories.loading || songs.loading ||
+    musicians.loading || submissions.loading || gigs.loading || reports.loading ||
+    leaderboard.loading || audit.loading;
+
+  return useMemo(() => {
+    const now = Date.now();
+    const u = users.data;
+
+    // KPIs
+    const totalUsers = u.length;
+    const subscribers = u.filter((x) => x.isPaid === true).length;
+    const pctPaid = totalUsers ? Math.round((subscribers / totalUsers) * 100) : 0;
+
+    const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+    const lastMonthStart = new Date(monthStart); lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+    const userMs = u.map((x) => toMs(x.createdAt)).filter((x): x is number => x != null);
+    const newThisMonth = userMs.filter((t) => t >= monthStart.getTime()).length;
+    const newLastMonth = userMs.filter((t) => t >= lastMonthStart.getTime() && t < monthStart.getTime()).length;
+    const usersChg = newLastMonth > 0 ? Math.round(((newThisMonth - newLastMonth) / newLastMonth) * 100) : null;
+
+    const allContent: Dated[] = [...posts.data, ...reels.data, ...stories.data, ...songs.data];
+    const newContent24h = allContent.filter((d) => { const t = contentMs(d); return t != null && t >= now - DAY; }).length;
+    const openReports = reports.data.length;
+    const submittedCount = submissions.data.filter((s) => s.status === "submitted").length;
+    const changesRequested = submissions.data.filter((s) => s.status === "changesRequested").length;
+    const inProgress = submissions.data.filter((s) => s.status === "inProgress").length;
+    const approved = submissions.data.filter((s) => s.status === "approved").length;
+    const gigOffers = gigs.data.filter((g) => g.status === "offered").length;
+    const musiciansTotal = musicians.data.length;
+
+    // Users by role (four known categories)
+    const roleCounts: Record<string, number> = { listener: 0, artist: 0, organizer: 0, venue: 0 };
+    for (const x of u) {
+      const raw = (x.roles?.[0] ?? x.role ?? x.userType ?? "").toString().toLowerCase();
+      const hit = ROLE_META.find((rm) => rm.match(raw));
+      if (hit) roleCounts[hit.key]++;
+    }
+    const usersByRole = ROLE_META.map((rm) => ({ label: rm.label, value: roleCounts[rm.key], color: rm.color }));
+
+    // Content mix
+    const mixRaw = [
+      { label: "Posts", value: posts.data.length },
+      { label: "Reels", value: reels.data.length },
+      { label: "Stories", value: stories.data.length },
+      { label: "Songs", value: songs.data.length },
+    ];
+    const mixMax = Math.max(1, ...mixRaw.map((m) => m.value));
+    const contentMix = mixRaw.map((m, i) => ({ ...m, pct: Math.round((m.value / mixMax) * 100), color: CONTENT_COLORS[i] }));
+
+    // Musicians by role
+    const mcount: Record<string, number> = {};
+    for (const m of musicians.data) { const r = (m.primaryRole ?? "other").toString(); mcount[r] = (mcount[r] ?? 0) + 1; }
+    const mSorted = Object.entries(mcount).sort((a, b) => b[1] - a[1]);
+    const top = mSorted.slice(0, 5);
+    const rest = mSorted.slice(5).reduce((a, [, v]) => a + v, 0);
+    const mrows = [...top.map(([k, v]) => ({ label: cap(k), value: v })), ...(rest > 0 ? [{ label: "Other", value: rest }] : [])];
+    const mMax = Math.max(1, ...mrows.map((r) => r.value));
+    const musiciansByRole = mrows.map((r) => ({ ...r, pct: Math.round((r.value / mMax) * 100) }));
+
+    // Forms funnel
+    const assigned = submissions.data.length;
+    const funnelMax = Math.max(1, assigned);
+    const formsFunnel = [
+      { label: "Assigned", value: assigned },
+      { label: "In progress", value: inProgress },
+      { label: "Submitted", value: submittedCount },
+      { label: "Approved", value: approved },
+    ].map((f) => ({ ...f, pct: Math.round((f.value / funnelMax) * 100) }));
+
+    // Upcoming gigs (future first; fall back to most recent past)
+    const gigWithMs = gigs.data
+      .map((g) => ({ g, t: g.startAt ? Date.parse(g.startAt) : NaN }))
+      .filter((x) => !Number.isNaN(x.t));
+    const future = gigWithMs.filter((x) => x.t >= now).sort((a, b) => a.t - b.t);
+    const past = gigWithMs.filter((x) => x.t < now).sort((a, b) => b.t - a.t);
+    const pickGigs = (future.length ? future : past).slice(0, 3);
+    const upcomingGigs = pickGigs.map(({ g, t }) => {
+      const d = new Date(t);
+      const dueDays = Math.round((t - now) / DAY);
+      const isFuture = t >= now;
+      return {
+        d: String(d.getDate()),
+        m: d.toLocaleDateString(undefined, { month: "short" }),
+        title: g.title || "Untitled gig",
+        sub: g.venue || g.organizer || (g.status ?? ""),
+        tag: isFuture ? (dueDays <= 0 ? "today" : `${dueDays}d`) : "past",
+        tone: (isFuture ? (dueDays <= 2 ? "warn" : "info") : "info") as Tone,
+      };
+    });
+
+    // Top creators (leaderboard)
+    const topCreators = [...leaderboard.data]
+      .sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0))
+      .slice(0, 4)
+      .map((r) => ({
+        name: r.name || "Unknown",
+        image: r.profileImage,
+        v: fmtK(r.totalPoints ?? 0),
+        sub: `${(r.totalPoints ?? 0).toLocaleString()} points`,
+      }));
+
+    // Recent activity (audit log)
+    const activity = [...audit.data]
+      .sort((a, b) => (b.at ?? 0) - (a.at ?? 0))
+      .slice(0, 8)
+      .map((a) => ({
+        who: a.actorName || "Admin",
+        what: a.action || "performed an action",
+        meta: [timeAgo(a.at), a.module || "system"].filter(Boolean).join(" · "),
+        tone: activityTone(a.action || ""),
+      }));
+
+    // Raw timestamps for the period-driven growth chart
+    const contentTimes = allContent.map(contentMs).filter((t): t is number => t != null);
+
+    return {
+      loading,
+      totalUsers, subscribers, pctPaid, newThisMonth, usersChg,
+      newContent24h, openReports, submittedCount, changesRequested, gigOffers, musiciansTotal,
+      usersByRole, contentMix, musiciansByRole, formsFunnel, upcomingGigs, topCreators, activity,
+      signupTimes: userMs, contentTimes,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    loading,
+    users.data, posts.data, reels.data, stories.data, songs.data,
+    musicians.data, submissions.data, gigs.data, reports.data, leaderboard.data, audit.data,
+  ]);
+}

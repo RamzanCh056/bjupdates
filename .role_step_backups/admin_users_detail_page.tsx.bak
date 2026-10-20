@@ -1,0 +1,256 @@
+"use client";
+
+import { Suspense, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Ban, CalendarDays, CheckCircle2, CircleDot, Clock, FileText, MapPin, Music2, PauseCircle, ShieldAlert, ShieldCheck, Store, UserRound, Users2, Video } from "lucide-react";
+import { useAdminUi } from "@/lib/adminUi";
+import { useDocOnce, useFieldCount } from "@/lib/firebase/hooks";
+import { setUserStatus, type AccountStatus } from "@/lib/userAdmin";
+import { can } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
+import { EmptyState, NoAccess, PageHeader, StatusPill, inputCls, btnPrimary, btnGhost } from "@/components/ui";
+import UserContent from "@/components/users/UserContent";
+
+type TimestampValue = { toDate?: () => Date } | number | string;
+type AppUser = {
+  id: string;
+  firstName?: string; secondName?: string; displayName?: string; fullName?: string; name?: string; username?: string;
+  email?: string; profileImage?: string; photoURL?: string; imageUrl?: string; bio?: string;
+  roles?: string[]; role?: string;
+  isPaid?: boolean; paidPlan?: string; subscription?: string; hasSubscription?: boolean; subscriptionActive?: boolean;
+  createdAt?: TimestampValue; lastActive?: TimestampValue; locationSharing?: boolean;
+  accountStatus?: AccountStatus; statusReason?: string; suspendedUntil?: number;
+  followers?: unknown[]; following?: unknown[];
+};
+
+function nameOf(user: AppUser) {
+  const fullName = [user.firstName, user.secondName].filter(Boolean).join(" ");
+  return fullName || user.displayName || user.fullName || user.name || user.username || "Unnamed user";
+}
+function dateOf(value: TimestampValue | undefined, withTime = false) {
+  if (!value) return "—";
+  const date = typeof value === "object" ? value.toDate?.() : new Date(value);
+  if (!date || Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat(undefined, withTime
+    ? { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit" }
+    : { day: "numeric", month: "short", year: "numeric" }).format(date);
+}
+function planOf(user: AppUser) {
+  if (user.isPaid === true) return user.paidPlan || "Paid";
+  if (user.subscriptionActive || user.hasSubscription || user.subscription === "paid") return "Paid (legacy)";
+  return "Free";
+}
+
+const STATUS_TONE: Record<AccountStatus, "good" | "warn" | "crit"> = { active: "good", suspended: "warn", banned: "crit" };
+
+function CountCard({ icon: Icon, label, value }: { icon: typeof FileText; label: string; value: number | null }) {
+  return (
+    <div className="card !p-4 flex flex-col gap-2">
+      <div className="w-8 h-8 rounded-[9px] bg-accent/12 text-accent grid place-items-center"><Icon className="w-4 h-4" /></div>
+      <div className="text-[22px] font-display font-bold tnum leading-none">{value ?? "—"}</div>
+      <div className="text-[11px] text-ink3">{label}</div>
+    </div>
+  );
+}
+
+function UserDetailInner() {
+  const searchParams = useSearchParams();
+  const userId = searchParams.get("id") ?? undefined;
+  const { effectiveRole } = useAdminUi();
+  const { data: user, loading } = useDocOnce<AppUser>("usersData", userId);
+  const posts = useFieldCount("posts", "userId", userId);
+  const reels = useFieldCount("reels", "userId", userId);
+  const songs = useFieldCount("songs", "userId", userId);
+  const stories = useFieldCount("stories", "ownerId", userId);
+  const events = useFieldCount("events", "ownerId", userId);
+  const stores = useFieldCount("stores", "userId", userId);
+  const reports = useFieldCount("reports", "reportedUserId", userId);
+
+  // Live status shared between header + moderation panel.
+  const [liveStatus, setLiveStatus] = useState<AccountStatus | null>(null);
+
+  if (!can(effectiveRole, "users")) return <NoAccess />;
+  if (loading) return <div className="flex items-center gap-2 text-ink3 text-[13px] py-16 justify-center"><Clock className="w-4 h-4 animate-pulse" /> Loading user…</div>;
+  if (!user) return <EmptyState icon={UserRound} title="User not found" sub="This usersData record may have been removed." action={<Link href="/users" className="text-accent text-[13px] font-semibold">Back to users</Link>} />;
+
+  const roles = user.roles?.filter(Boolean) ?? (user.role ? [user.role] : []);
+  const image = user.profileImage || user.photoURL || user.imageUrl;
+  const name = nameOf(user);
+  const plan = planOf(user);
+  const status: AccountStatus = liveStatus ?? user.accountStatus ?? "active";
+
+  return (
+    <div className="flex flex-col gap-4 pb-10">
+      <PageHeader
+        title="User profile"
+        sub="Read-only view of the live app account"
+        action={<Link href="/users" className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink2 hover:text-ink"><ArrowLeft className="w-4 h-4" /> Back to users</Link>}
+      />
+
+      {/* Identity header */}
+      <section className="card relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-accent/10 to-transparent pointer-events-none" />
+        <div className="relative flex flex-col sm:flex-row gap-4 sm:items-center">
+          {image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" className="w-20 h-20 rounded-full object-cover bg-surface3 ring-2 ring-line shrink-0" />
+          ) : <div className="w-20 h-20 rounded-full bg-accent/15 text-accent grid place-items-center font-display font-bold text-2xl ring-2 ring-line shrink-0">{name.slice(0, 2).toUpperCase()}</div>}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="font-display font-bold text-xl truncate">{name}</h2>
+              <StatusPill tone={STATUS_TONE[status]}>{status}</StatusPill>
+            </div>
+            <p className="text-[13px] text-ink2 mt-1 truncate">{user.email || "No email on profile"}</p>
+            <div className="flex items-center gap-2 mt-2 flex-wrap">
+              <span className={cn("pill", plan === "Free" ? "" : "!bg-good/15 !text-good")}>{plan}</span>
+              {roles.map((role) => <StatusPill key={role} tone="accent">{role}</StatusPill>)}
+              {roles.length === 0 && <span className="text-[11px] text-ink3">No role set</span>}
+            </div>
+            <p className="text-[11px] text-ink3 font-mono mt-2 truncate">{user.id}</p>
+          </div>
+        </div>
+      </section>
+
+      {/* Activity counts */}
+      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+        <CountCard icon={FileText} label="Posts" value={posts} />
+        <CountCard icon={Video} label="Reels" value={reels} />
+        <CountCard icon={CircleDot} label="Stories" value={stories} />
+        <CountCard icon={Music2} label="Songs" value={songs} />
+        <CountCard icon={CalendarDays} label="Events" value={events} />
+        <CountCard icon={Store} label="Stores" value={stores} />
+        <CountCard icon={ShieldAlert} label="Reports" value={reports} />
+      </section>
+
+      {/* Account + social */}
+      <section className="grid lg:grid-cols-2 gap-4">
+        <div className="card">
+          <h2 className="font-display font-bold text-[15px] mb-4 flex items-center gap-2"><UserRound className="w-4 h-4 text-ink3" /> Account</h2>
+          <dl className="grid grid-cols-2 gap-x-5 gap-y-4 text-[13px]">
+            <Info label="Joined" value={dateOf(user.createdAt)} />
+            <Info label="Last active" value={dateOf(user.lastActive, true)} />
+            <Info label="Plan" value={plan} />
+            <Info label="Location sharing" value={user.locationSharing ? "Enabled" : "Not enabled"} icon={MapPin} />
+          </dl>
+        </div>
+        <div className="card">
+          <h2 className="font-display font-bold text-[15px] mb-4 flex items-center gap-2"><Users2 className="w-4 h-4 text-ink3" /> Social & profile</h2>
+          <dl className="grid grid-cols-2 gap-x-5 gap-y-4 text-[13px]">
+            <Info label="Followers" value={String(user.followers?.length ?? 0)} />
+            <Info label="Following" value={String(user.following?.length ?? 0)} />
+            <Info label="Profile status" value={user.bio?.trim() ? "Complete" : "Bio missing"} />
+            <Info label="Roles" value={roles.length ? roles.join(", ") : "Not set"} />
+          </dl>
+          {user.bio?.trim() && <p className="mt-5 border-t border-line pt-4 text-[13px] text-ink2 leading-relaxed">{user.bio}</p>}
+        </div>
+      </section>
+
+      {/* All content & catalog owned by this user */}
+      <section className="flex flex-col gap-2">
+        <h2 className="font-display font-bold text-[15px] flex items-center gap-2 px-1"><FileText className="w-4 h-4 text-ink3" /> Content &amp; catalog</h2>
+        <UserContent userId={user.id} />
+      </section>
+
+      <UserModeration
+        userId={user.id}
+        initialStatus={user.accountStatus ?? "active"}
+        initialReason={user.statusReason}
+        initialUntil={user.suspendedUntil ?? null}
+        onStatusChange={setLiveStatus}
+      />
+    </div>
+  );
+}
+
+function UserModeration({ userId, initialStatus, initialReason, initialUntil, onStatusChange }: { userId: string; initialStatus: AccountStatus; initialReason?: string; initialUntil: number | null; onStatusChange?: (s: AccountStatus) => void }) {
+  const [status, setStatus] = useState<AccountStatus>(initialStatus);
+  const [reason, setReason] = useState(initialReason ?? "");
+  const [until, setUntil] = useState<number | null>(initialUntil);
+  const [mode, setMode] = useState<null | "suspend" | "ban">(null);
+  const [draftReason, setDraftReason] = useState("");
+  const [days, setDays] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const blocked = status !== "active";
+
+  async function apply(next: AccountStatus) {
+    setBusy(true); setMsg(null);
+    const untilMs = next === "suspended" && days.trim() && Number(days) > 0 ? Date.now() + Number(days) * 86400000 : null;
+    try {
+      await setUserStatus({ userId, status: next, reason: draftReason.trim() || undefined, until: untilMs });
+      setStatus(next); onStatusChange?.(next);
+      if (next === "active") { setReason(""); setUntil(null); } else { setReason(draftReason.trim()); setUntil(untilMs); }
+      setMode(null); setDraftReason(""); setDays("");
+      setMsg(next === "active" ? "User reinstated and notified." : `User ${next}. Sessions revoked and the user notified.`);
+    } catch (e) {
+      setMsg("Action failed: " + ((e as Error)?.message ?? "unknown error"));
+    } finally { setBusy(false); }
+  }
+
+  const StatusIcon = status === "banned" ? Ban : status === "suspended" ? PauseCircle : ShieldCheck;
+
+  return (
+    <section className="card">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="font-display font-bold text-[15px] flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-ink3" /> Moderation</h2>
+        <StatusPill tone={STATUS_TONE[status]}>{status}</StatusPill>
+      </div>
+
+      {blocked && (
+        <div className={cn("rounded-xl2 border p-3 mb-3 text-[13px] flex gap-2.5", status === "banned" ? "bg-crit/8 border-crit/25" : "bg-warn/8 border-warn/25")}>
+          <StatusIcon className={cn("w-4 h-4 mt-0.5 shrink-0", status === "banned" ? "text-crit" : "text-warn")} />
+          <div>
+            <div className="text-ink">{reason || "No reason recorded."}</div>
+            {until && <div className="text-[11px] text-ink3 mt-1">Suspended until {new Date(until).toLocaleString()}</div>}
+          </div>
+        </div>
+      )}
+
+      {mode ? (
+        <div className="flex flex-col gap-3 max-w-xl">
+          <textarea className={cn(inputCls, "min-h-[70px] resize-y")} placeholder={`Reason shown to the user (optional — a default ${mode} message is used if blank)`} value={draftReason} maxLength={300} onChange={(e) => setDraftReason(e.target.value)} />
+          {mode === "suspend" && <input className={inputCls} type="number" min={1} placeholder="Duration in days (optional — blank = until reinstated)" value={days} onChange={(e) => setDays(e.target.value)} />}
+          <div className="flex items-center gap-2">
+            <button className={mode === "ban" ? "inline-flex items-center gap-1.5 bg-crit/15 text-crit font-semibold text-[13px] px-3.5 py-2 rounded-[10px] hover:bg-crit/25 transition disabled:opacity-50" : btnPrimary} onClick={() => apply(mode === "ban" ? "banned" : "suspended")} disabled={busy}>
+              {mode === "ban" ? <Ban className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
+              {busy ? "Applying…" : mode === "ban" ? "Confirm ban" : "Confirm suspension"}
+            </button>
+            <button className={btnGhost} onClick={() => { setMode(null); setDraftReason(""); setDays(""); }} disabled={busy}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {status === "active" ? (
+            <>
+              <button className={btnGhost} onClick={() => setMode("suspend")}><PauseCircle className="w-4 h-4" /> Suspend</button>
+              <button className="inline-flex items-center gap-1.5 bg-crit/15 text-crit font-semibold text-[13px] px-3.5 py-2 rounded-[10px] hover:bg-crit/25 transition" onClick={() => setMode("ban")}><Ban className="w-4 h-4" /> Ban</button>
+            </>
+          ) : (
+            <button className={btnPrimary} onClick={() => apply("active")} disabled={busy}><CheckCircle2 className="w-4 h-4" /> {busy ? "…" : "Reinstate"}</button>
+          )}
+          {msg && <span className="text-[12.5px] text-ink3">{msg}</span>}
+        </div>
+      )}
+      <p className="text-[11.5px] text-ink3 mt-3">Suspended or banned users are signed out and shown the reason on next login. Full data-level enforcement requires the Firestore rules update.</p>
+    </section>
+  );
+}
+
+function Info({ label, value, icon: Icon }: { label: string; value: string; icon?: typeof FileText }) {
+  return (
+    <div>
+      <dt className="text-[11px] text-ink3 mb-1 flex items-center gap-1.5">{Icon && <Icon className="w-3 h-3" />}{label}</dt>
+      <dd className="text-ink2 break-words">{value}</dd>
+    </div>
+  );
+}
+
+export default function UserDetailPage() {
+  return (
+    <Suspense fallback={null}>
+      <UserDetailInner />
+    </Suspense>
+  );
+}

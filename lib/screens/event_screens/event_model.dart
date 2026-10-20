@@ -10,9 +10,17 @@ class Event1Model {
   final String endTime;
   final String date;
   final String ownerId;
-  final double? latitude; // Add latitude for map location
-  final double? longitude; // Add longitude for map location
-  final String? address; // Add address for human-readable location
+  final double? latitude;
+  final double? longitude;
+  final String? address;
+
+  // Event-planning extras (all optional / backward-compatible)
+  final num? budget;
+  final num? attendance;
+  final List<String> staffNeeded;
+  final List<String> suppliers;
+  final List<String> permits;
+  final String? notes;
 
   Event1Model({
     required this.id,
@@ -24,26 +32,41 @@ class Event1Model {
     required this.endTime,
     required this.date,
     required this.ownerId,
-    this.latitude, // Optional for backward compatibility
-    this.longitude, // Optional for backward compatibility
-    this.address, // Optional for backward compatibility
+    this.latitude,
+    this.longitude,
+    this.address,
+    this.budget,
+    this.attendance,
+    this.staffNeeded = const [],
+    this.suppliers = const [],
+    this.permits = const [],
+    this.notes,
   });
+
+  static List<String> _stringList(dynamic v) =>
+      v is List ? v.map((e) => e.toString()).toList() : const [];
 
   /// Creates an EventModel from a Firestore document map.
   factory Event1Model.fromMap(String id, Map<String, dynamic> data) {
     return Event1Model(
       id: id,
-      imageUrl: data['imageUrl'] as String,
-      artistName: data['artistName'] as String,
-      eventName: data['eventName'] as String,
-      place: data['place'] as String,
-      startTime: data['startTime'] as String,
-      endTime: data['endTime'] as String,
-      date: data['date'] as String,
-      ownerId: data['ownerId'] as String,
-      latitude: data['latitude']?.toDouble(), // Parse latitude if available
-      longitude: data['longitude']?.toDouble(), // Parse longitude if available
-      address: data['address'] as String?, // Parse address if available
+      imageUrl: (data['imageUrl'] ?? '') as String,
+      artistName: (data['artistName'] ?? '') as String,
+      eventName: (data['eventName'] ?? '') as String,
+      place: (data['place'] ?? '') as String,
+      startTime: (data['startTime'] ?? '') as String,
+      endTime: (data['endTime'] ?? '') as String,
+      date: (data['date'] ?? '') as String,
+      ownerId: (data['ownerId'] ?? '') as String,
+      latitude: (data['latitude'] as num?)?.toDouble(),
+      longitude: (data['longitude'] as num?)?.toDouble(),
+      address: data['address'] as String?,
+      budget: data['budget'] as num?,
+      attendance: data['attendance'] as num?,
+      staffNeeded: _stringList(data['staffNeeded']),
+      suppliers: _stringList(data['suppliers']),
+      permits: _stringList(data['permits']),
+      notes: data['notes'] as String?,
     );
   }
 
@@ -58,9 +81,15 @@ class Event1Model {
       'endTime': endTime,
       'date': date,
       'ownerId': ownerId,
-      'latitude': latitude, // Include latitude in Firestore
-      'longitude': longitude, // Include longitude in Firestore
-      'address': address, // Include address in Firestore
+      'latitude': latitude,
+      'longitude': longitude,
+      'address': address,
+      'budget': budget,
+      'attendance': attendance,
+      'staffNeeded': staffNeeded,
+      'suppliers': suppliers,
+      'permits': permits,
+      'notes': notes,
     };
   }
 }

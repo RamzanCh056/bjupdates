@@ -1,0 +1,178 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard, Users, Mic2, Store, Film, CircleDot, Music2,
+  Trophy, Bell, FileText, ClipboardCheck,
+  CalendarDays, Wallet, FolderKanban, UserCog, type LucideIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { can, type Scope } from "@/lib/rbac";
+import { useAdminUi } from "@/lib/adminUi";
+import { useCollection, useCollectionCount } from "@/lib/firebase/hooks";
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+  scope: Scope;
+  badge?: string;
+  badgeCrit?: boolean;
+  isNew?: boolean;
+}
+interface NavGroup {
+  title?: string;
+  accent?: boolean;
+  items: NavItem[];
+}
+
+const GROUPS: NavGroup[] = [
+  { items: [{ label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, scope: "dashboard" }] },
+  {
+    title: "People",
+    items: [
+      { label: "Users", href: "/users", icon: Users, scope: "users" },
+      { label: "Artists", href: "/artists", icon: Mic2, scope: "users" },
+      { label: "Venues & Stores", href: "/venues", icon: Store, scope: "users" },
+    ],
+  },
+  {
+    title: "Content",
+    items: [
+      { label: "Posts & Reels", href: "/content", icon: Film, scope: "content" },
+      { label: "Stories", href: "/stories", icon: CircleDot, scope: "content" },
+      { label: "Songs & Tracks", href: "/music", icon: Music2, scope: "music" },
+      { label: "Events", href: "/events", icon: CalendarDays, scope: "events" },
+    ],
+  },
+  {
+    title: "Engagement",
+    items: [
+      { label: "Gamification", href: "/gamification", icon: Trophy, scope: "gamification" },
+      { label: "Notifications", href: "/notifications", icon: Bell, scope: "notifications" },
+    ],
+  },
+  {
+    title: "Musician Career",
+    accent: true,
+    items: [
+      { label: "Musicians", href: "/musicians", icon: Users, scope: "forms" },
+      { label: "Form Builder", href: "/forms", icon: FileText, scope: "forms", isNew: true },
+      { label: "Submissions", href: "/submissions", icon: ClipboardCheck, scope: "forms" },
+      { label: "Gigs", href: "/gigs", icon: CalendarDays, scope: "gigs" },
+      { label: "Payments", href: "/payments", icon: Wallet, scope: "payments" },
+      { label: "Documents", href: "/documents", icon: FolderKanban, scope: "documents" },
+    ],
+  },
+  {
+    title: "System",
+    items: [
+      { label: "Admins", href: "/admins", icon: UserCog, scope: "system" },
+    ],
+  },
+];
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { effectiveRole } = useAdminUi();
+
+  // Live count badges for the Musician Career section (no hardcoded numbers).
+  const { data: musicians } = useCollection<{ id: string }>("musicians");
+  const { data: submissions } = useCollection<{ id: string; status?: string }>("formSubmissions");
+  const { data: gigs } = useCollection<{ id: string; status?: string }>("gigs");
+  const { data: payments } = useCollection<{ id: string; status?: string }>("payments");
+  const { data: documents } = useCollection<{ id: string }>("documents");
+  const userCount = useCollectionCount("usersData");
+
+  const outstanding = ["pending", "partiallyPaid", "overdue"];
+  const careerBadges: Record<string, { value: number; crit?: boolean }> = {
+    "/musicians": { value: musicians.length },
+    "/submissions": {
+      value: submissions.filter((x) => x.status === "submitted").length,
+      crit: true,
+    },
+    "/gigs": { value: gigs.filter((x) => x.status === "offered").length },
+    "/payments": {
+      value: payments.filter((x) => outstanding.includes(x.status ?? "")).length,
+    },
+    "/documents": { value: documents.length },
+  };
+
+  return (
+    <aside className="w-[248px] shrink-0 h-screen sticky top-0 overflow-auto border-r border-line bg-gradient-to-b from-[#0C1230] to-bg">
+      <div className="flex items-center gap-3 px-5 pt-5 pb-4">
+        <div className="w-10 h-10 rounded-[11px] grid place-items-center bg-gradient-to-br from-accent to-accent2 shadow-card overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="BeatJerky" className="w-full h-full object-contain p-1" />
+        </div>
+        <div>
+          <div className="font-display font-extrabold text-[16px] leading-none">BeatJerky</div>
+          <div className="text-[10.5px] tracking-[0.14em] text-ink3 font-semibold uppercase mt-1">Admin</div>
+        </div>
+      </div>
+
+      <nav className="px-3 pb-6">
+        {GROUPS.map((g, gi) => {
+          const items = g.items.filter((it) => can(effectiveRole, it.scope));
+          if (items.length === 0) return null;
+          return (
+            <div key={gi}>
+              {g.title && (
+                <div
+                  className={cn(
+                    "text-[10.5px] tracking-[0.13em] uppercase font-bold px-3 pt-4 pb-1.5",
+                    g.accent ? "text-accent" : "text-ink3"
+                  )}
+                >
+                  {g.title}
+                </div>
+              )}
+              {items.map((it) => {
+                const active = pathname === it.href || pathname.startsWith(it.href + "/");
+                const Icon = it.icon;
+                const dyn = careerBadges[it.href];
+                const badgeValue =
+                  it.badge ?? (it.href === "/users" && userCount !== null && userCount !== undefined
+                    ? userCount.toLocaleString()
+                    : dyn && dyn.value > 0 ? String(dyn.value) : undefined);
+                const badgeCrit = it.badgeCrit ?? dyn?.crit ?? false;
+                return (
+                  <Link
+                    key={it.href}
+                    href={it.href}
+                    className={cn(
+                      "relative flex items-center gap-3 px-3 py-2 rounded-[10px] text-[13.5px] font-medium transition-colors",
+                      active ? "bg-accent/15 text-white" : "text-ink2 hover:bg-surface hover:text-ink"
+                    )}
+                  >
+                    {active && (
+                      <span className="absolute -left-3 top-2 bottom-2 w-[3px] rounded bg-accent" />
+                    )}
+                    <Icon className="w-[17px] h-[17px] shrink-0 opacity-85" />
+                    <span className="truncate">{it.label}</span>
+                    {it.isNew && (
+                      <span className="ml-auto text-[9px] font-extrabold tracking-wide text-accent bg-accent/15 px-1.5 py-0.5 rounded-full">
+                        NEW
+                      </span>
+                    )}
+                    {badgeValue && (
+                      <span
+                        className={cn(
+                          "ml-auto text-[11px] font-bold min-w-[20px] text-center px-1.5 py-0.5 rounded-full",
+                          badgeCrit ? "bg-crit/15 text-crit" : "bg-surface2 text-ink2"
+                        )}
+                      >
+                        {badgeValue}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}

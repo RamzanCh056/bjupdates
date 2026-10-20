@@ -1,0 +1,203 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock, ExternalLink, Loader2, MapPin, RefreshCw, Search } from "lucide-react";
+import { useAdminUi } from "@/lib/adminUi";
+import { usePaginatedCollection } from "@/lib/firebase/hooks";
+import { can } from "@/lib/rbac";
+import { cn } from "@/lib/utils";
+import { useAuthorProfiles } from "@/lib/authorProfiles";
+import { EmptyState, Modal, NoAccess, PageHeader, btnGhost } from "@/components/ui";
+
+type EventDoc = {
+  id: string;
+  eventName?: string;
+  artistName?: string;
+  place?: string;
+  date?: string;
+  startTime?: string;
+  endTime?: string;
+  imageUrl?: string;
+  ownerId?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+};
+
+function timeRange(e: EventDoc): string {
+  return [e.startTime, e.endTime].filter(Boolean).join(" – ");
+}
+function mapUrl(e: EventDoc): string | null {
+  if (typeof e.latitude === "number" && typeof e.longitude === "number") {
+    return `https://www.google.com/maps/search/?api=1&query=${e.latitude},${e.longitude}`;
+  }
+  const q = (e.address || e.place || "").trim();
+  return q ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}` : null;
+}
+
+function Cover({ url, name, className }: { url?: string; name: string; className: string }) {
+  if (url) {
+    // eslint-disable-next-line @next/next/no-img-element
+    return <img src={url} alt="" className={cn(className, "object-cover bg-surface3")} />;
+  }
+  return <div className={cn(className, "bg-surface3 grid place-items-center")}><CalendarDays className="w-5 h-5 text-ink3" /></div>;
+}
+
+export default function EventsPage() {
+  const { effectiveRole } = useAdminUi();
+  const { data, loading, error, hasMore, nextPage, firstPage } = usePaginatedCollection<EventDoc>("events");
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<EventDoc | null>(null);
+
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return data
+      .filter((e) => !q || [e.eventName, e.artistName, e.place, e.address, e.ownerId].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)))
+      .sort((a, b) => String(b.date ?? "").localeCompare(String(a.date ?? "")));
+  }, [data, search]);
+
+  const owners = useAuthorProfiles(rows.map((r) => r.ownerId).filter(Boolean) as string[]);
+
+  if (!can(effectiveRole, "events")) return <NoAccess />;
+
+  async function goNext() { await nextPage(); setPage((v) => v + 1); }
+  async function goFirst() { await firstPage(); setPage(1); }
+
+  return (
+    <div className="flex flex-col gap-4 pb-10">
+      <PageHeader
+        title="Events"
+        sub="Browse events created by users across the app"
+        action={<button className={btnGhost} onClick={goFirst} disabled={loading}><RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} /> Refresh</button>}
+      />
+
+      <div className="card !p-0 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b border-line">
+          <div className="flex items-center gap-2 bg-surface2 border border-line rounded-[10px] px-3 py-2 w-full max-w-[360px]">
+            <Search className="w-4 h-4 text-ink3" />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search event, artist, place or owner…" className="bg-transparent outline-none text-[13px] w-full placeholder:text-ink3" />
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-ink3"><Loader2 className="w-5 h-5 animate-spin" /></div>
+        ) : error ? (
+          <div className="px-4 py-14 text-center text-[13px] text-crit">Could not load events. Confirm admins can read this collection in the Firestore rules.</div>
+        ) : rows.length === 0 ? (
+          <EmptyState icon={CalendarDays} title="No events found" sub={search ? "Search only applies to the current page." : "No events on this page."} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-[13px]">
+              <thead>
+                <tr className="text-left text-[10.5px] uppercase tracking-wide text-ink3 border-b border-line">
+                  <th className="px-4 py-2.5 font-semibold">Event</th>
+                  <th className="px-4 py-2.5 font-semibold">Owner</th>
+                  <th className="px-4 py-2.5 font-semibold">Place</th>
+                  <th className="px-4 py-2.5 font-semibold">Date</th>
+                  <th className="px-4 py-2.5 font-semibold">Time</th>
+                  <th className="px-4 py-2.5 font-semibold w-[44px]" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((e) => {
+                  const prof = e.ownerId ? owners[e.ownerId] : undefined;
+                  const oname = prof?.name || (e.ownerId ? e.ownerId.slice(0, 8) + "…" : "Unknown");
+                  const ename = e.eventName || "Untitled event";
+                  return (
+                    <tr key={e.id} className="border-b border-line last:border-0 hover:bg-surface2/50 transition-colors cursor-pointer" onClick={() => setSelected(e)}>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-3 min-w-[200px]">
+                          <div className="w-11 h-11 rounded-[10px] overflow-hidden shrink-0"><Cover url={e.imageUrl} name={ename} className="w-full h-full" /></div>
+                          <div className="min-w-0">
+                            <div className="truncate max-w-[240px] font-medium text-ink">{ename}</div>
+                            {e.artistName ? <div className="truncate max-w-[240px] text-[12px] text-ink3">{e.artistName}</div> : null}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-2 min-w-[130px]">
+                          {prof?.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={prof.image} alt="" className="w-7 h-7 rounded-full object-cover bg-surface3" />
+                          ) : <div className="w-7 h-7 rounded-full bg-accent/15 text-accent grid place-items-center text-[10px] font-bold">{oname.slice(0, 2).toUpperCase()}</div>}
+                          <span className="truncate max-w-[120px]">{oname}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-ink2"><span className="truncate max-w-[200px] inline-block align-bottom">{e.place || "—"}</span></td>
+                      <td className="px-4 py-2.5 text-ink2 whitespace-nowrap">{e.date || "—"}</td>
+                      <td className="px-4 py-2.5 text-ink2 whitespace-nowrap">{timeRange(e) || "—"}</td>
+                      <td className="px-4 py-2.5 text-ink3"><ChevronRight className="w-4 h-4" /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-line">
+          <span className="text-[12px] text-ink3">Page {page} · {rows.length} shown · up to 50 per page</span>
+          <div className="flex items-center gap-2">
+            <button className={cn(btnGhost, "!px-3")} onClick={goFirst} disabled={loading || page === 1}><ChevronLeft className="w-4 h-4" /> First</button>
+            <button className={cn(btnGhost, "!px-3")} onClick={goNext} disabled={loading || !hasMore}>Next <ChevronRight className="w-4 h-4" /></button>
+          </div>
+        </div>
+      </div>
+
+      <EventDetail event={selected} ownerImage={selected?.ownerId ? owners[selected.ownerId]?.image : undefined} onClose={() => setSelected(null)} />
+    </div>
+  );
+}
+
+function EventDetail({ event, ownerImage, onClose }: { event: EventDoc | null; ownerImage?: string; onClose: () => void }) {
+  if (!event) return null;
+  const ename = event.eventName || "Untitled event";
+  const oname = event.ownerId ? event.ownerId.slice(0, 8) + "…" : "Unknown";
+  const map = mapUrl(event);
+  const time = timeRange(event);
+
+  return (
+    <Modal open={!!event} onClose={onClose} title="Event" wide>
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="w-full sm:w-[220px] shrink-0 rounded-xl2 overflow-hidden aspect-[4/3]"><Cover url={event.imageUrl} name={ename} className="w-full h-full" /></div>
+        <div className="min-w-0 flex-1 flex flex-col gap-3">
+          <div>
+            <div className="text-[17px] font-semibold text-ink break-words">{ename}</div>
+            {event.artistName ? <div className="text-[13px] text-ink3">{event.artistName}</div> : null}
+          </div>
+          <div className="grid grid-cols-2 gap-x-5 gap-y-2 text-[12.5px]">
+            <div><div className="text-ink3 text-[11px]">Date</div><div className="text-ink2 flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> {event.date || "—"}</div></div>
+            <div><div className="text-ink3 text-[11px]">Time</div><div className="text-ink2 flex items-center gap-1">{time ? <><Clock className="w-3.5 h-3.5" /> {time}</> : "—"}</div></div>
+            <div><div className="text-ink3 text-[11px]">Place</div><div className="text-ink2">{event.place || "—"}</div></div>
+            <div>
+              <div className="text-ink3 text-[11px]">Owner</div>
+              {event.ownerId ? (
+                <Link href={`/users/detail?id=${encodeURIComponent(event.ownerId)}`} className="flex items-center gap-1.5 group mt-0.5">
+                  {ownerImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={ownerImage} alt="" className="w-5 h-5 rounded-full object-cover bg-surface3" />
+                  ) : null}
+                  <span className="text-ink2 truncate group-hover:text-accent">{oname}</span>
+                </Link>
+              ) : <div className="text-ink2">{oname}</div>}
+            </div>
+          </div>
+          {event.address?.trim() ? (
+            <div className="text-[12.5px]">
+              <div className="text-ink3 text-[11px] mb-1">Address</div>
+              <p className="text-ink2 whitespace-pre-wrap leading-relaxed">{event.address}</p>
+            </div>
+          ) : null}
+          {map ? (
+            <a href={map} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-[12.5px] text-accent font-medium">
+              <MapPin className="w-3.5 h-3.5" /> View on map <ExternalLink className="w-3 h-3" />
+            </a>
+          ) : null}
+          <p className="text-[10.5px] text-ink3 font-mono break-all mt-auto">{event.id}</p>
+        </div>
+      </div>
+    </Modal>
+  );
+}

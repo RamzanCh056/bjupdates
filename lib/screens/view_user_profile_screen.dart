@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:beatjerky/utils/color.dart';
 import 'package:beatjerky/utils/name_utils.dart';
+import '../widgets/app_badges.dart';
 import 'new_reels.dart';
 import 'profile_screen.dart';
 
@@ -34,6 +35,7 @@ class _ViewUserProfileScreenState extends State<ViewUserProfileScreen> {
   String? _secondName;
   String? _profileImage;
   bool _isPaid = false;
+  bool _verified = false;
 
   @override
   void initState() {
@@ -51,6 +53,7 @@ class _ViewUserProfileScreenState extends State<ViewUserProfileScreen> {
           _secondName = data['secondName'] as String?;
           _profileImage = data['profileImage'] as String?;
           _isPaid = (data['isPaid'] ?? false) as bool;
+          _verified = (data['verified'] ?? false) as bool;
           _isLoading = false;
         });
       } else if (mounted) {
@@ -149,9 +152,13 @@ class _ViewUserProfileScreenState extends State<ViewUserProfileScreen> {
                           fontWeight: FontWeight.w700,
                         ),
                       ),
-                      if (_isPaid) ...[
+                      if (_verified || _isPaid) ...[
                         const SizedBox(width: 8),
-                        Icon(Icons.check_circle_rounded, color: Colors.blue[400], size: 22),
+                        BadgeStrip(
+                          verified: _verified,
+                          premium: _isPaid,
+                          size: 20,
+                        ),
                       ],
                     ],
                   ),

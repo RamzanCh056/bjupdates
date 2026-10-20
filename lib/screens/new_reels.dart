@@ -1,7 +1,5 @@
-import 'package:beatjerky/providers/user_provider.dart';
-import 'package:beatjerky/Stripe/SubscriptionHelper.dart';
+import '../widgets/app_badges.dart';
 import 'package:beatjerky/Stripe/SubscriptionServicefull.dart';
-import 'package:beatjerky/screens/create_video_screen_1.dart';
 import 'package:beatjerky/utils/app_sizes.dart';
 import 'package:beatjerky/utils/app_toast.dart';
 import 'package:beatjerky/utils/color.dart';
@@ -11,7 +9,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:preload_page_view/preload_page_view.dart';
 import 'package:shimmer/shimmer.dart';
@@ -2465,16 +2462,25 @@ class _ReelsScreenState extends State<ReelsScreen> {
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    if ((userSnapshot.data!['isPaid'] ??
-                                            false) ==
-                                        true) ...[
+                                    if ((userSnapshot.data!['verified'] ??
+                                                false) ==
+                                            true ||
+                                        (userSnapshot.data!['isPaid'] ??
+                                                false) ==
+                                            true) ...[
                                       SizedBox(
                                         width: responsiveWidth(4, context),
                                       ),
-                                      Icon(
-                                        Icons.check_circle_rounded,
-                                        color: const Color(0xFF03DAC6),
-                                        size: nameFontSize + 2,
+                                      BadgeStrip(
+                                        verified:
+                                            (userSnapshot.data!['verified'] ??
+                                                    false) ==
+                                                true,
+                                        premium:
+                                            (userSnapshot.data!['isPaid'] ??
+                                                    false) ==
+                                                true,
+                                        size: usernameFontSize,
                                       ),
                                     ],
                                   ],

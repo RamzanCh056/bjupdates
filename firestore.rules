@@ -6,6 +6,11 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Admin panel users carry a custom auth claim `admin: true`.
+    function isAdmin() {
+      return signedIn() && request.auth.token.admin == true;
+    }
+
     function isSelf(userId) {
       return signedIn() && request.auth.uid == userId;
     }
@@ -63,7 +68,8 @@ service cloud.firestore {
     match /usersData/{userId} {
       allow read: if signedIn();
       allow create: if isSelf(userId);
-      allow update, delete: if isSelf(userId);
+      allow update: if isSelf(userId) || isAdmin();
+      allow delete: if isSelf(userId);
 
       match /planHistory/{historyId} {
         allow read, write: if isSelf(userId);
@@ -336,6 +342,121 @@ service cloud.firestore {
 
         allow delete: if signedIn() && entryId == request.auth.uid;
       }
+    }
+
+    // ── Gigs & opportunities (public board) ───────────────────────────────────
+    match /opportunities/{oppId} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.postedByUid == request.auth.uid;
+      // Owner may edit/delete/close; any signed-in user may touch only the
+      // denormalized applicantCount (via the apply transaction).
+      allow update: if signedIn() && (
+        resource.data.postedByUid == request.auth.uid ||
+        isAdmin() ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['applicantCount'])
+      );
+      allow delete: if signedIn() &&
+        (resource.data.postedByUid == request.auth.uid || isAdmin());
+
+      match /applications/{applicantId} {
+        function oppOwner() {
+          return get(/databases/$(database)/documents/opportunities/$(oppId))
+            .data.postedByUid;
+        }
+        allow read: if signedIn() && (
+          resource.data.applicantUid == request.auth.uid ||
+          applicantId == request.auth.uid || oppOwner() == request.auth.uid ||
+          isAdmin());
+        // Applicant creates/updates their own application.
+        allow create, update: if signedIn() &&
+          applicantId == request.auth.uid &&
+          request.resource.data.applicantUid == request.auth.uid;
+        // Owner updates an applicant's status (accept/decline).
+        allow update: if signedIn() && oppOwner() == request.auth.uid;
+        allow delete: if signedIn() &&
+          (applicantId == request.auth.uid || oppOwner() == request.auth.uid);
+      }
+    }
+
+    // ── Verification (admin-approved badge) ───────────────────────────────────
+    match /verificationRequests/{reqUid} {
+      allow read: if signedIn() && (reqUid == request.auth.uid || isAdmin());
+      // User submits / updates their own request.
+      allow create, update: if signedIn() && reqUid == request.auth.uid &&
+        request.resource.data.uid == request.auth.uid;
+      // Admin reviews (status / reviewedBy / rejectReason).
+      allow update: if isAdmin();
+      allow delete: if isAdmin() ||
+        (signedIn() && reqUid == request.auth.uid);
+    }
+
+    // ── Suppliers & equipment marketplace ─────────────────────────────────────
+    match /supplierListings/{listingId} {
+      allow read: if signedIn();
+      allow create: if signedIn() &&
+        request.resource.data.supplierUid == request.auth.uid;
+      allow update: if signedIn() && (
+        resource.data.supplierUid == request.auth.uid ||
+        isAdmin() ||
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['requestCount'])
+      );
+      allow delete: if signedIn() &&
+        (resource.data.supplierUid == request.auth.uid || isAdmin());
+
+      match /requests/{requesterId} {
+        function listingOwner() {
+          return get(/databases/$(database)/documents/supplierListings/$(listingId))
+            .data.supplierUid;
+        }
+        allow read: if signedIn() && (
+          resource.data.requesterUid == request.auth.uid ||
+          requesterId == request.auth.uid ||
+          listingOwner() == request.auth.uid || isAdmin());
+        allow create, update: if signedIn() && requesterId == request.auth.uid &&
+          request.resource.data.requesterUid == request.auth.uid;
+        allow update: if signedIn() &&
+          (listingOwner() == request.auth.uid || isAdmin());
+        allow delete: if isAdmin() || (signedIn() &&
+          (requesterId == request.auth.uid || listingOwner() == request.auth.uid));
+      }
+    }
+
+    // ── Collection-group owner reads ──────────────────────────────────────────
+    // "My applications" / "My requests" tabs query across all parents by the
+    // owner field. Collection-group list queries need a field-only rule (no
+    // get()), so these dedicated matches grant exactly that.
+    match /{document=**}/applications/{appId} {
+      allow read: if signedIn() &&
+        resource.data.applicantUid == request.auth.uid;
+    }
+    match /{document=**}/requests/{reqId} {
+      allow read: if signedIn() &&
+        resource.data.requesterUid == request.auth.uid;
+    }
+
+    // ── DJ invoices ───────────────────────────────────────────────────────────
+    match /invoices/{invId} {
+      allow read: if signedIn() &&
+        (resource.data.djUid == request.auth.uid || isAdmin());
+      allow create: if signedIn() &&
+        request.resource.data.djUid == request.auth.uid;
+      allow update, delete: if signedIn() &&
+        (resource.data.djUid == request.auth.uid || isAdmin());
+    }
+
+    // ── Royalty statements ────────────────────────────────────────────────────
+    match /royaltyStatements/{stId} {
+      allow read: if signedIn() && (
+        resource.data.labelUid == request.auth.uid ||
+        resource.data.artistUid == request.auth.uid ||
+        isAdmin());
+      allow create: if signedIn() &&
+        request.resource.data.labelUid == request.auth.uid;
+      allow update, delete: if signedIn() &&
+        (resource.data.labelUid == request.auth.uid || isAdmin());
     }
 
     // ── Fallback: any other collection used by the app ────────────────────────

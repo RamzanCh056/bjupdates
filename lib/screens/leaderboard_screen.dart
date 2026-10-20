@@ -10,6 +10,7 @@ import 'package:shimmer/shimmer.dart';
 import '../model/gamification_models.dart';
 import '../services/achievement_service.dart';
 import '../widget/confetti_widget.dart';
+import '../widgets/app_badges.dart';
 import 'settings_screen.dart';
 import 'view_user_profile_screen.dart';
 
@@ -35,6 +36,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   String _userEmail = '';
   String? _profileImage;
   bool _isPaid = false;
+  bool _verified = false;
   String? _currentBadge;
   String _paidPlan = "";
   DateTime? _planStartDate;
@@ -353,6 +355,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
         // Profile
         _isPaid = userData['isPaid'] ?? false;
+        _verified = userData['verified'] ?? false;
         _profileImage = userData['profileImage'];
         _userEmail = userData['email'] ?? user.email ?? '';
         _paidPlan = userData['paidPlan'] ?? "";
@@ -923,6 +926,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                 if (uid != null) openUserProfile(context, uid);
                               },
                               child: Stack(
+                                clipBehavior: Clip.none,
                                 children: [
                                   Container(
                                     decoration: BoxDecoration(
@@ -935,59 +939,79 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                       ? ClipOval(
                                           child: Image.network(
                                             _profileImage!,
-                                            width: 60,
-                                            height: 60,
+                                            width: 72,
+                                            height: 72,
                                             fit: BoxFit.cover,
                                             errorBuilder: (_, __, ___) =>
                                                 const CircleAvatar(
-                                              radius: 30,
+                                              radius: 36,
                                               backgroundColor: Colors.grey,
                                               child: Icon(
                                                 Icons.person_rounded,
                                                 color: Colors.white,
-                                                size: 30,
+                                                size: 34,
                                               ),
                                             ),
                                           ),
                                         )
                                       : const CircleAvatar(
-                                          radius: 30,
+                                          radius: 36,
                                           backgroundColor: Colors.grey,
                                           child: Icon(
                                             Icons.person_rounded,
                                             color: Colors.white,
-                                            size: 30,
+                                            size: 34,
                                           ),
                                         ),
                                 ),
-                                // Blue Tick Badge
-                                if (_isPaid)
+                                // Verified or Premium badge
+                                if (_verified || _isPaid)
                                   Positioned(
                                     bottom: 2,
                                     right: 2,
-                                    child: Container(
-                                      padding: EdgeInsets.all(3),
-                                      decoration: BoxDecoration(
-                                        color: Colors.blue,
-                                        shape: BoxShape.circle,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.blue.withOpacity(0.5),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
+                                    child: _verified
+                                        ? Container(
+                                            padding: EdgeInsets.all(3),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blue,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 2,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.blue.withOpacity(0.5),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              Icons.verified,
+                                              color: Colors.white,
+                                              size: 10,
+                                            ),
+                                          )
+                                        : Container(
+                                            padding: EdgeInsets.all(2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.black,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 2,
+                                              ),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: const Color(0xFFF3B33F).withOpacity(0.5),
+                                                  blurRadius: 4,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: const PremiumBadge(size: 12),
                                           ),
-                                        ],
-                                      ),
-                                      child: Icon(
-                                        Icons.verified,
-                                        color: Colors.white,
-                                        size: 10,
-                                      ),
-                                    ),
                                   ),
                                 // Achievement Badge - positioned to not hide picture
                                 if (_currentBadge != null)
@@ -1092,8 +1116,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                       ),
                                     ),
                                   ],
-                                  // Add Verified User text for paid users
-                                  if (_isPaid) ...[
+                                  // Verified (admin-approved) label
+                                  if (_verified) ...[
                                     SizedBox(height: 6),
                                     Container(
                                       padding: EdgeInsets.symmetric(
@@ -1124,6 +1148,43 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                                             'Verified User',
                                             style: TextStyle(
                                               color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                  // Premium (paid subscription) label
+                                  if (_isPaid) ...[
+                                    const SizedBox(height: 6),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 3,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            Color(0xFFFCE08A),
+                                            Color(0xFFF3B33F),
+                                            Color(0xFFC8831A),
+                                          ],
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        ),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          PremiumBadge(size: 11),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Premium User',
+                                            style: TextStyle(
+                                              color: Color(0xFF1E1400),
                                               fontSize: 10,
                                               fontWeight: FontWeight.bold,
                                             ),

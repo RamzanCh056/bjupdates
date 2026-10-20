@@ -6,6 +6,8 @@ import 'package:beatjerky/utils/name_utils.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:beatjerky/utils/role_utils.dart';
 
 enum NearbyGenderFilter { all, male, female, other }
 
@@ -18,6 +20,10 @@ class NearbyUser {
   final DateTime? lastActive;
   /// Normalized: `male`, `female`, or `other`.
   final String? gender;
+  /// Professional roles from usersData (dj, band, venue, …).
+  final List<String> roles;
+  /// Primary professional role for display (first non-listener).
+  final String? primaryRole;
 
   const NearbyUser({
     required this.uid,
@@ -27,6 +33,8 @@ class NearbyUser {
     required this.distanceKm,
     this.lastActive,
     this.gender,
+    this.roles = const [],
+    this.primaryRole,
   });
 
   bool get isOnline {
@@ -104,6 +112,13 @@ class NearbyUsersService {
     }
   }
 
+  /// Client-side role filter. Empty/null [roleFilter] keeps everyone.
+  static bool matchesRole(List<String> userRoles, String? roleFilter) {
+    final r = (roleFilter ?? '').trim();
+    if (r.isEmpty) return true;
+    return userRoles.contains(r);
+  }
+
   static NearbyUser _userFromDoc(
     DocumentSnapshot<Map<String, dynamic>> doc, {
     required double distanceKm,
@@ -117,6 +132,12 @@ class NearbyUsersService {
           'User',
     );
 
+    final roles = parseRolesFromUserData(data);
+    final primary = roles.firstWhere(
+      (r) => r != RoleKeys.listener,
+      orElse: () => '',
+    );
+
     return NearbyUser(
       uid: doc.id,
       displayName: name,
@@ -126,6 +147,8 @@ class NearbyUsersService {
       distanceKm: distanceKm,
       lastActive: (data['lastActive'] as Timestamp?)?.toDate(),
       gender: normalizeGender(data['gender']),
+      roles: roles,
+      primaryRole: primary.isEmpty ? null : primary,
     );
   }
 
@@ -184,6 +207,7 @@ class NearbyUsersService {
     required double radiusKm,
     bool refreshLocation = true,
     NearbyGenderFilter gender = NearbyGenderFilter.all,
+    String? roleFilter,
   }) async {
     final myUid = _auth.currentUser?.uid;
     if (myUid == null) {
@@ -238,6 +262,7 @@ class NearbyUsersService {
 
           final user = _userFromDoc(doc, distanceKm: dist);
           if (!matchesGender(user.gender, gender)) continue;
+          if (!matchesRole(user.roles, roleFilter)) continue;
 
           final existing = seen[doc.id];
           if (existing == null || dist < existing.distanceKm) {
@@ -262,6 +287,7 @@ class NearbyUsersService {
   /// All registered users, sorted by recent activity (no location filter).
   static Future<NearbyUsersResult> fetchAll({
     NearbyGenderFilter gender = NearbyGenderFilter.all,
+    String? roleFilter,
   }) async {
     final myUid = _auth.currentUser?.uid;
     if (myUid == null) {
@@ -276,7 +302,8 @@ class NearbyUsersService {
       for (final doc in snap.docs) {
         if (doc.id == myUid) continue;
         final user = _userFromDoc(doc, distanceKm: 0);
-        if (matchesGender(user.gender, gender)) {
+        if (matchesGender(user.gender, gender) &&
+            matchesRole(user.roles, roleFilter)) {
           users.add(user);
         }
       }
@@ -295,6 +322,87 @@ class NearbyUsersService {
       return NearbyUsersResult(users: users);
     } catch (e, st) {
       logDebugException('NearbyUsersService.fetchAll', e, stackTrace: st);
+      return NearbyUsersResult(errorMessage: e.toString());
+    }
+  }
+
+  /// Geocodes a postal code (optionally "postal, country") to a lat/lng.
+  /// Returns `[lat, lng]`, or null when it can't be resolved.
+  static Future<List<double>?> geocodePostalCode(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) return null;
+    try {
+      final results = await locationFromAddress(q);
+      if (results.isEmpty) return null;
+      final loc = results.first;
+      return [loc.latitude, loc.longitude];
+    } catch (e, st) {
+      logDebugException('NearbyUsersService.geocodePostalCode', e,
+          stackTrace: st);
+      return null;
+    }
+  }
+
+  /// Radius search centered on an explicit point (e.g. a geocoded postal
+  /// code) instead of the device GPS. Does not request location permission
+  /// and does not write the caller's own location.
+  static Future<NearbyUsersResult> fetchNearbyAt({
+    required double lat,
+    required double lng,
+    required double radiusKm,
+    NearbyGenderFilter gender = NearbyGenderFilter.all,
+    String? roleFilter,
+  }) async {
+    final myUid = _auth.currentUser?.uid;
+    if (myUid == null) {
+      return const NearbyUsersResult(errorMessage: 'Please sign in');
+    }
+
+    try {
+      final bounds = GeohashUtils.queryBounds(lat, lng, radiusKm);
+      final seen = <String, NearbyUser>{};
+
+      for (final bound in bounds) {
+        final snap = await _firestore
+            .collection('usersData')
+            .where('locationSharing', isEqualTo: true)
+            .where('location.geohash', isGreaterThanOrEqualTo: bound[0])
+            .where('location.geohash', isLessThanOrEqualTo: bound[1])
+            .limit(40)
+            .get();
+
+        for (final doc in snap.docs) {
+          if (doc.id == myUid) continue;
+          final data = doc.data();
+          final loc = data['location'] as Map<String, dynamic>?;
+          if (loc == null) continue;
+          final dlat = (loc['lat'] as num?)?.toDouble();
+          final dlng = (loc['lng'] as num?)?.toDouble();
+          if (dlat == null || dlng == null) continue;
+
+          final dist = GeohashUtils.distanceKm(lat, lng, dlat, dlng);
+          if (dist > radiusKm) continue;
+
+          final user = _userFromDoc(doc, distanceKm: dist);
+          if (!matchesGender(user.gender, gender)) continue;
+          if (!matchesRole(user.roles, roleFilter)) continue;
+
+          final existing = seen[doc.id];
+          if (existing == null || dist < existing.distanceKm) {
+            seen[doc.id] = user;
+          }
+        }
+      }
+
+      final list = seen.values.toList()
+        ..sort((a, b) => a.distanceKm.compareTo(b.distanceKm));
+
+      return NearbyUsersResult(
+        users: list,
+        locationSharingEnabled: true,
+      );
+    } catch (e, st) {
+      logDebugException('NearbyUsersService.fetchNearbyAt', e, stackTrace: st);
       return NearbyUsersResult(errorMessage: e.toString());
     }
   }

@@ -61,6 +61,12 @@ class EventService {
     double? latitude,
     double? longitude,
     String? address,
+    num? budget,
+    num? attendance,
+    List<String> staffNeeded = const [],
+    List<String> suppliers = const [],
+    List<String> permits = const [],
+    String? notes,
   }) async {
     // 1) upload image
     final String imageId = _uuid.v4();
@@ -82,6 +88,12 @@ class EventService {
       latitude: latitude,
       longitude: longitude,
       address: address,
+      budget: budget,
+      attendance: attendance,
+      staffNeeded: staffNeeded,
+      suppliers: suppliers,
+      permits: permits,
+      notes: notes,
     );
     await _eventsRef.add(event.toMap());
 
@@ -155,6 +167,12 @@ class EventService {
     double? latitude,
     double? longitude,
     String? address,
+    num? budget,
+    num? attendance,
+    List<String> staffNeeded = const [],
+    List<String> suppliers = const [],
+    List<String> permits = const [],
+    String? notes,
   }) async {
     try {
       final Map<String, dynamic> updateData = {
@@ -167,6 +185,12 @@ class EventService {
         'latitude': latitude,
         'longitude': longitude,
         'address': address,
+        'budget': budget,
+        'attendance': attendance,
+        'staffNeeded': staffNeeded,
+        'suppliers': suppliers,
+        'permits': permits,
+        'notes': notes,
       };
 
       // If a new image is provided, upload it and update the URL

@@ -1,0 +1,247 @@
+import 'package:flutter/material.dart';
+
+import '../../models/invoice_models.dart';
+import '../../services/invoice_service.dart';
+import '../../utils/app_toast.dart';
+import '../../utils/color.dart';
+import 'create_invoice_screen.dart';
+
+class InvoiceDetailScreen extends StatelessWidget {
+  final Invoice invoice;
+  const InvoiceDetailScreen({super.key, required this.invoice});
+
+  static const Color _accent = Color(0xFFBB86FC);
+  String _m(num v) => '\$${v.toStringAsFixed(2)}';
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: darkBackgroundPrimary,
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+        ),
+        backgroundColor: darkAppBarBackground,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text('Invoice',
+            style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 18)),
+        actions: [
+          PopupMenuButton<String>(
+            iconColor: Colors.white,
+            color: const Color(0xFF2A2A33),
+            onSelected: (v) async {
+              switch (v) {
+                case 'edit':
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) =>
+                              CreateInvoiceScreen(existing: invoice)));
+                  break;
+                case 'draft':
+                  await InvoiceService.setStatus(invoice.id, DocStatus.draft);
+                  break;
+                case 'sent':
+                  await InvoiceService.setStatus(invoice.id, DocStatus.sent);
+                  break;
+                case 'paid':
+                  await InvoiceService.setStatus(invoice.id, DocStatus.paid);
+                  break;
+                case 'delete':
+                  final ok = await InvoiceService.delete(invoice.id);
+                  if (ok && context.mounted) Navigator.pop(context);
+                  break;
+              }
+            },
+            itemBuilder: (_) => const [
+              PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(value: 'draft', child: Text('Mark draft')),
+              PopupMenuItem(value: 'sent', child: Text('Mark sent')),
+              PopupMenuItem(value: 'paid', child: Text('Mark paid')),
+              PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
+          ),
+        ],
+      ),
+      body: StreamBuilder<Invoice?>(
+        stream: InvoiceService.watchOne(invoice.id),
+        initialData: invoice,
+        builder: (context, snap) {
+          final inv = snap.data ?? invoice;
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+            children: [
+              Row(children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(inv.number,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800)),
+                      if (inv.djName.isNotEmpty)
+                        Text('From ${inv.djName}',
+                            style: const TextStyle(
+                                color: Colors.white54, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                _statusPill(inv.status),
+              ]),
+              const SizedBox(height: 14),
+              _twoCol('Billed to', inv.clientName.isEmpty ? '—' : inv.clientName,
+                  'Date',
+                  inv.issueDateTime == null
+                      ? '—'
+                      : '${inv.issueDateTime!.day}/${inv.issueDateTime!.month}/${inv.issueDateTime!.year}'),
+              const SizedBox(height: 18),
+              _itemsTable(inv),
+              const SizedBox(height: 14),
+              _totals(inv),
+              if (inv.notes.trim().isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('Notes',
+                    style: TextStyle(
+                        color: Colors.white.withOpacity(0.6),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Text(inv.notes,
+                    style: const TextStyle(color: Colors.white70, fontSize: 13.5)),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _statusPill(DocStatus s) {
+    Color c = s == DocStatus.paid
+        ? Colors.green
+        : s == DocStatus.sent
+            ? const Color(0xFF38bdf8)
+            : Colors.white54;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+          color: c.withOpacity(0.18), borderRadius: BorderRadius.circular(12)),
+      child: Text(s.label,
+          style:
+              TextStyle(color: c, fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _twoCol(String k1, String v1, String k2, String v2) {
+    Widget col(String k, String v) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(k,
+                  style: const TextStyle(color: Colors.white54, fontSize: 11.5)),
+              const SizedBox(height: 2),
+              Text(v, style: const TextStyle(color: Colors.white, fontSize: 14)),
+            ],
+          ),
+        );
+    return Row(children: [col(k1, v1), col(k2, v2)]);
+  }
+
+  Widget _itemsTable(Invoice inv) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(children: [
+        Row(children: const [
+          Expanded(
+              flex: 5,
+              child: Text('Item',
+                  style: TextStyle(color: Colors.white54, fontSize: 11.5))),
+          Expanded(
+              flex: 1,
+              child: Text('Qty',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: Colors.white54, fontSize: 11.5))),
+          Expanded(
+              flex: 2,
+              child: Text('Rate',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: Colors.white54, fontSize: 11.5))),
+          Expanded(
+              flex: 2,
+              child: Text('Amount',
+                  textAlign: TextAlign.right,
+                  style: TextStyle(color: Colors.white54, fontSize: 11.5))),
+        ]),
+        const Divider(color: Colors.white12),
+        ...inv.items.map((it) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 5),
+              child: Row(children: [
+                Expanded(
+                    flex: 5,
+                    child: Text(
+                        it.description.isEmpty ? '—' : it.description,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13))),
+                Expanded(
+                    flex: 1,
+                    child: Text('${it.qty}',
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13))),
+                Expanded(
+                    flex: 2,
+                    child: Text(_m(it.rate),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 13))),
+                Expanded(
+                    flex: 2,
+                    child: Text(_m(it.total),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 13))),
+              ]),
+            )),
+      ]),
+    );
+  }
+
+  Widget _totals(Invoice inv) {
+    Widget row(String k, String v, {bool bold = false}) => Padding(
+          padding: const EdgeInsets.symmetric(vertical: 3),
+          child: Row(children: [
+            Text(k,
+                style: TextStyle(
+                    color: bold ? Colors.white : Colors.white70,
+                    fontSize: bold ? 15 : 13.5,
+                    fontWeight: bold ? FontWeight.w800 : FontWeight.w500)),
+            const Spacer(),
+            Text(v,
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: bold ? 17 : 13.5,
+                    fontWeight: bold ? FontWeight.w800 : FontWeight.w600)),
+          ]),
+        );
+    return Column(children: [
+      row('Subtotal', _m(inv.subtotal)),
+      row('GST (${inv.gstRate.toStringAsFixed(inv.gstRate % 1 == 0 ? 0 : 3)}%)',
+          _m(inv.gst)),
+      row('QST (${inv.qstRate.toStringAsFixed(inv.qstRate % 1 == 0 ? 0 : 3)}%)',
+          _m(inv.qst)),
+      const Divider(color: Colors.white12),
+      row('Total (${inv.currency})', _m(inv.total), bold: true),
+    ]);
+  }
+}

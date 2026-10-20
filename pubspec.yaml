@@ -56,6 +56,9 @@ dependencies:
   cached_network_image:
   chewie:
   path_provider:
+  pdf: ^3.11.1
+  printing: ^5.13.4
+  google_sign_in: ^6.2.2
   #audioplayers: ^4.1.0
   intl:
   just_audio:

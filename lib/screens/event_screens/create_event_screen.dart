@@ -49,6 +49,43 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   String _selectedAddress = '';
   bool _isLocationSelected = false;
 
+  // Event-planning extras
+  final TextEditingController _budgetController = TextEditingController();
+  final TextEditingController _attendanceController = TextEditingController();
+  final TextEditingController _notesController = TextEditingController();
+  final Set<String> _staffNeeded = {};
+  final Set<String> _suppliers = {};
+  final Set<String> _permits = {};
+
+  static const List<String> _staffOptions = [
+    'DJ',
+    'Band',
+    'Sound',
+    'Lighting',
+    'Stage crew',
+    'Security',
+    'First aid',
+    'Photo/Video',
+  ];
+  static const List<String> _supplierOptions = [
+    'Furniture',
+    'Catering & bar',
+    'Decor',
+    'Tents & structures',
+    'Stage/Sound/Lighting',
+    'Photo/Video',
+    'Transport & logistics',
+    'Security',
+  ];
+  static const List<String> _permitOptions = [
+    'Alcohol',
+    'Food',
+    'Minors',
+    'Outdoor',
+    'Temporary structure',
+    'Ticket sales',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +103,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       _selectedAddress = widget.event!.place;
       _isLocationSelected =
           widget.event!.latitude != null && widget.event!.longitude != null;
+      _budgetController.text = widget.event!.budget?.toString() ?? '';
+      _attendanceController.text = widget.event!.attendance?.toString() ?? '';
+      _notesController.text = widget.event!.notes ?? '';
+      _staffNeeded.addAll(widget.event!.staffNeeded);
+      _suppliers.addAll(widget.event!.suppliers);
+      _permits.addAll(widget.event!.permits);
     }
 
     // Check permission after frame is built
@@ -367,6 +410,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           latitude: _selectedLatitude,
           longitude: _selectedLongitude,
           address: _selectedAddress,
+          budget: num.tryParse(_budgetController.text.trim()),
+          attendance: num.tryParse(_attendanceController.text.trim()),
+          staffNeeded: _staffNeeded.toList(),
+          suppliers: _suppliers.toList(),
+          permits: _permits.toList(),
+          notes: _notesController.text.trim(),
         );
       } else {
         // Update existing event
@@ -383,6 +432,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
           latitude: _selectedLatitude,
           longitude: _selectedLongitude,
           address: _selectedAddress,
+          budget: num.tryParse(_budgetController.text.trim()),
+          attendance: num.tryParse(_attendanceController.text.trim()),
+          staffNeeded: _staffNeeded.toList(),
+          suppliers: _suppliers.toList(),
+          permits: _permits.toList(),
+          notes: _notesController.text.trim(),
         );
       }
 
@@ -399,6 +454,119 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         setState(() => _loading = false);
       }
     }
+  }
+
+  Widget _extraLabel(String t) => Padding(
+    padding: const EdgeInsets.only(bottom: 10, top: 6),
+    child: Text(
+      t,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
+  );
+
+  Widget _chipGroup(String title, List<String> options, Set<String> selected) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8, top: 4),
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((o) {
+            final sel = selected.contains(o);
+            return InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: () => setState(() {
+                if (sel) {
+                  selected.remove(o);
+                } else {
+                  selected.add(o);
+                }
+              }),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: sel
+                      ? const Color(0xFFBB86FC)
+                      : Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: sel ? const Color(0xFFBB86FC) : Colors.white24,
+                  ),
+                ),
+                child: Text(
+                  o,
+                  style: TextStyle(
+                    color: sel ? Colors.black : Colors.white,
+                    fontSize: 13,
+                    fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 18),
+      ],
+    );
+  }
+
+  Widget _buildEventExtras() {
+    const whiteStyle = TextStyle(color: Colors.white, fontSize: 15);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _extraLabel('Budget & size'),
+        TextFormField(
+          controller: _budgetController,
+          keyboardType: TextInputType.number,
+          style: whiteStyle,
+          decoration: _inputDecoration('Estimated budget', Icons.attach_money),
+        ),
+        const SizedBox(height: 14),
+        TextFormField(
+          controller: _attendanceController,
+          keyboardType: TextInputType.number,
+          style: whiteStyle,
+          decoration: _inputDecoration(
+            'Expected attendance',
+            Icons.people_outline,
+          ),
+        ),
+        const SizedBox(height: 22),
+        _chipGroup('Artists & staff needed', _staffOptions, _staffNeeded),
+        _chipGroup('Suppliers & equipment', _supplierOptions, _suppliers),
+        _chipGroup('Permits to confirm', _permitOptions, _permits),
+        _extraLabel('Notes'),
+        TextFormField(
+          controller: _notesController,
+          maxLines: 3,
+          style: whiteStyle,
+          decoration: _inputDecoration(
+            'Notes / special needs',
+            Icons.note_outlined,
+          ),
+        ),
+        const SizedBox(height: 4),
+      ],
+    );
   }
 
   Widget _buildImagePlaceholder(String text) {
@@ -512,7 +680,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Optional: Show role info banner (can be removed if not needed)
-                
+
                   // Image picker
                   GestureDetector(
                     onTap: _pickImage,
@@ -1056,8 +1224,12 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   ),
                   const SizedBox(height: 28),
 
+                  _buildEventExtras(),
+                  const SizedBox(height: 8),
+
                   // Submit button with role restriction ONLY HERE
                   Container(
+                    height: 48,
                     decoration: BoxDecoration(
                       gradient: appGradient,
                       borderRadius: BorderRadius.circular(16),

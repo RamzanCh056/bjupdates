@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import '../widgets/pro_profile_view.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,9 +21,11 @@ import 'auth_screen/login_screen.dart';
 import 'edit_profile.dart';
 import 'new_reels.dart';
 import 'profile_photos_feed_screen.dart';
-import '../widgets/profile/discover_people_section.dart';
 import '../widgets/profile/professional_dashboard_card.dart';
-import '../widgets/musician/musician_tools_card.dart';
+import '../widgets/role_switcher.dart';
+import '../widgets/app_badges.dart';
+import 'package:provider/provider.dart';
+import '../providers/user_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   /// When null, shows the current user's profile (with Edit profile).
@@ -53,6 +56,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String? _profileImage;
   String? _bio;
   bool _isPaid = false;
+  bool _verified = false;
 
   bool _isLoading = false;
 
@@ -586,6 +590,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _profileImage = data['profileImage'] as String?;
           _bio = data['bio'] as String?;
           _isPaid = (data['isPaid'] ?? false) as bool;
+          _verified = (data['verified'] ?? false) as bool;
         });
       }
     } catch (e) {
@@ -918,7 +923,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (_currentBadge != null || _isPaid) ...[
+                    if (_currentBadge != null || _isPaid || _verified) ...[
                       Container(
                         height: 20,
                         width: 1,
@@ -928,99 +933,134 @@ class _ProfileScreenState extends State<ProfileScreen>
                           borderRadius: BorderRadius.circular(1),
                         ),
                       ),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        alignment: WrapAlignment.end,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          if (_isPaid)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.shade400.withValues(
-                                  alpha: 0.18,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.blue.shade400.withValues(
-                                    alpha: 0.5,
+                      Flexible(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            alignment: WrapAlignment.start,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (_verified)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
                                   ),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.verified_rounded,
-                                    color: Colors.blue.shade300,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Verified',
-                                    style: TextStyle(
-                                      color: Colors.blue.shade300,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFF3B9EFF,
+                                    ).withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF3B9EFF,
+                                      ).withValues(alpha: 0.5),
+                                      width: 1,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          if (_currentBadge != null)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.amber.shade600.withValues(
-                                      alpha: 0.25,
-                                    ),
-                                    Colors.orange.shade600.withValues(
-                                      alpha: 0.2,
-                                    ),
-                                  ],
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      VerifiedBadge(size: 14),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Verified',
+                                        style: TextStyle(
+                                          color: Color(0xFF8FC6FF),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: Colors.amber.shade400.withValues(
-                                    alpha: 0.6,
+                              if (_isPaid)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
                                   ),
-                                  width: 1,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.emoji_events_rounded,
-                                    color: Colors.amber.shade300,
-                                    size: 14,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    // 'Achievement ·
-                                    '$_currentBadge',
-                                    style: TextStyle(
-                                      color: Colors.amber.shade200,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
+                                  decoration: BoxDecoration(
+                                    color: const Color(
+                                      0xFFE0A325,
+                                    ).withValues(alpha: 0.16),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFFE0A325,
+                                      ).withValues(alpha: 0.5),
+                                      width: 1,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                        ],
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      PremiumBadge(size: 14),
+                                      SizedBox(width: 4),
+                                      Text(
+                                        'Premium',
+                                        style: TextStyle(
+                                          color: Color(0xFFF3C969),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              if (_currentBadge != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Colors.amber.shade600.withValues(
+                                          alpha: 0.25,
+                                        ),
+                                        Colors.orange.shade600.withValues(
+                                          alpha: 0.2,
+                                        ),
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: Colors.amber.shade400.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.emoji_events_rounded,
+                                        color: Colors.amber.shade300,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        // 'Achievement ·
+                                        '$_currentBadge',
+                                        style: TextStyle(
+                                          color: Colors.amber.shade200,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ],
@@ -1050,6 +1090,21 @@ class _ProfileScreenState extends State<ProfileScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
+                const SizedBox(height: 12),
+                ProProfileView(
+                  uid: _profileUserId,
+                  role: _isOwnProfile
+                      ? (context
+                                .read<UserStatusProvider>()
+                                .effectiveRoles
+                                .isNotEmpty
+                            ? context
+                                  .read<UserStatusProvider>()
+                                  .effectiveRoles
+                                  .first
+                            : null)
+                      : null,
+                ),
               ],
             ),
           ),
@@ -1057,6 +1112,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         const SizedBox(height: 16),
         // Edit profile button (only for own profile, Instagram style)
         if (_isOwnProfile) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: RoleSwitcherChip(),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: SizedBox(
@@ -1080,8 +1142,6 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const SizedBox(height: 16),
           ProfessionalDashboardCard(userId: _profileUserId),
-          const MusicianToolsCard(),
-          const DiscoverPeopleSection(),
         ],
       ],
     );
@@ -1790,22 +1850,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                 )
               : null,
         ),
-        if (_isPaid)
+        if (_verified || _isPaid)
           Positioned(
             bottom: 2,
             right: 2,
             child: Container(
-              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
-                color: Colors.blue,
+                color: darkBackgroundPrimary,
                 shape: BoxShape.circle,
                 border: Border.all(color: darkBackgroundPrimary, width: 2),
               ),
-              child: const Icon(
-                Icons.verified_rounded,
-                color: Colors.white,
-                size: 12,
-              ),
+              child: _verified
+                  ? const VerifiedBadge(size: 18)
+                  : const PremiumBadge(size: 18),
             ),
           ),
         if (_currentBadge != null)

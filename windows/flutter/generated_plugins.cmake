@@ -10,6 +10,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   firebase_storage
   geolocator_windows
   permission_handler_windows
+  printing
   pro_video_editor
   record_windows
   share_plus

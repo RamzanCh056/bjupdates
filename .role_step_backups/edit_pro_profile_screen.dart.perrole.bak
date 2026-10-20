@@ -1,0 +1,274 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+import '../utils/app_toast.dart';
+import '../utils/color.dart';
+import '../utils/role_utils.dart';
+
+/// Role-aware professional / organization profile editor.
+/// Saves to usersData/{uid}.proProfile (merge). Individual roles (artist, DJ,
+/// band, technician) and organization roles (venue, agency, studio, label,
+/// supplier, organizer) see different fields.
+class EditProProfileScreen extends StatefulWidget {
+  const EditProProfileScreen({super.key});
+
+  @override
+  State<EditProProfileScreen> createState() => _EditProProfileScreenState();
+}
+
+class _EditProProfileScreenState extends State<EditProProfileScreen> {
+  static const Color _muted = Color(0xFFB0B0B0);
+
+  // Common
+  final _city = TextEditingController();
+  final _region = TextEditingController();
+  final _postal = TextEditingController();
+  final _phone = TextEditingController();
+  final _website = TextEditingController();
+  final _instagram = TextEditingController();
+  final _facebook = TextEditingController();
+  // Individual
+  final _stageName = TextEditingController();
+  final _skills = TextEditingController();
+  // Organization
+  final _orgName = TextEditingController();
+  final _orgType = TextEditingController();
+  final _staffNeeded = TextEditingController();
+  final _description = TextEditingController();
+
+  String _role = RoleKeys.artist;
+  bool get _isOrg => isOrganizationRole(_role);
+  bool _loading = true;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    for (final c in [
+      _city, _region, _postal, _phone, _website, _instagram, _facebook,
+      _stageName, _skills, _orgName, _orgType, _staffNeeded, _description,
+    ]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) {
+        if (mounted) setState(() => _loading = false);
+        return;
+      }
+      final snap = await FirebaseFirestore.instance
+          .collection('usersData')
+          .doc(uid)
+          .get();
+      final data = snap.data() ?? {};
+
+      // Pick the user's professional role (first non-listener role).
+      final roles = parseRolesFromUserData(data);
+      _role = roles.firstWhere(
+        (r) => r != RoleKeys.listener,
+        orElse: () => roles.isNotEmpty ? roles.first : RoleKeys.artist,
+      );
+
+      final pro = (data['proProfile'] as Map?)?.cast<String, dynamic>() ?? {};
+      String g(String k) => (pro[k] ?? '').toString();
+      _city.text = g('city');
+      _region.text = g('region');
+      _postal.text = g('postalCode');
+      _phone.text = g('phone');
+      _website.text = g('website');
+      _instagram.text = g('instagram');
+      _facebook.text = g('facebook');
+      _stageName.text = g('stageName');
+      _skills.text = g('skills');
+      _orgName.text = g('orgName');
+      _orgType.text = g('orgType');
+      _staffNeeded.text = g('staffNeeded');
+      _description.text = g('description');
+    } catch (_) {
+      // keep empty on error
+    }
+    if (mounted) setState(() => _loading = false);
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    setState(() => _saving = true);
+
+    String t(TextEditingController c) => c.text.trim();
+    final pro = <String, dynamic>{
+      'kind': _isOrg ? 'organization' : 'individual',
+      'role': _role,
+      'city': t(_city),
+      'region': t(_region),
+      'postalCode': t(_postal),
+      'phone': t(_phone),
+      'website': t(_website),
+      'instagram': t(_instagram),
+      'facebook': t(_facebook),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (_isOrg) {
+      pro.addAll({
+        'orgName': t(_orgName),
+        'orgType': t(_orgType),
+        'staffNeeded': t(_staffNeeded),
+        'description': t(_description),
+      });
+    } else {
+      pro.addAll({
+        'stageName': t(_stageName),
+        'skills': t(_skills),
+      });
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('usersData')
+          .doc(uid)
+          .set({'proProfile': pro}, SetOptions(merge: true));
+      if (mounted) {
+        AppToast.show('Professional profile saved.');
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) AppToast.show('Could not save: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: darkBackgroundPrimary,
+      appBar: AppBar(
+        backgroundColor: darkBackgroundPrimary,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        title: Text('${roleDisplayLabel(_role)} profile',
+            style: const TextStyle(
+                color: Colors.white, fontWeight: FontWeight.w700, fontSize: 18)),
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+              children: [
+                Text(
+                  _isOrg
+                      ? 'Tell people about your organization.'
+                      : 'Tell people about your work.',
+                  style: const TextStyle(color: _muted, fontSize: 13),
+                ),
+                const SizedBox(height: 18),
+
+                if (_isOrg) ...[
+                  _header('Organization'),
+                  _field(_orgName, 'Organization name'),
+                  _field(_orgType, 'Organization type (e.g. nightclub, agency)'),
+                  _field(_staffNeeded, 'Artists / staff usually needed',
+                      maxLines: 2),
+                  _field(_description, 'Short description', maxLines: 3,
+                      maxLength: 300),
+                ] else ...[
+                  _header('About you'),
+                  _field(_stageName, 'Stage name'),
+                  _field(_skills, 'Skills / instruments / services',
+                      maxLines: 2),
+                ],
+
+                const SizedBox(height: 10),
+                _header('Location'),
+                _field(_city, 'City'),
+                _field(_region, 'Province / region'),
+                _field(_postal, 'Postal code'),
+
+                const SizedBox(height: 10),
+                _header('Contact & links'),
+                _field(_phone, 'Phone', keyboard: TextInputType.phone),
+                _field(_website, 'Website'),
+                _field(_instagram, 'Instagram'),
+                _field(_facebook, 'Facebook'),
+
+                const SizedBox(height: 26),
+                SizedBox(
+                  height: 52,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: appGradient,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: TextButton(
+                      onPressed: _saving ? null : _save,
+                      child: Text(
+                        _saving ? 'Saving…' : 'Save profile',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _header(String text) => Padding(
+        padding: const EdgeInsets.only(bottom: 8, top: 4),
+        child: Text(text.toUpperCase(),
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.55),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5)),
+      );
+
+  Widget _field(TextEditingController c, String hint,
+      {int maxLines = 1, int? maxLength, TextInputType? keyboard}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: c,
+        maxLines: maxLines,
+        maxLength: maxLength,
+        keyboardType: keyboard,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: _muted),
+          counterStyle: const TextStyle(color: _muted),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.06),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: purpleAccent),
+          ),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        ),
+      ),
+    );
+  }
+}

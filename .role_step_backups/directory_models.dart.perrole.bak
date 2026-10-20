@@ -1,0 +1,86 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+import '../utils/name_utils.dart';
+import '../utils/role_utils.dart';
+import '../utils/pro_profile_utils.dart';
+
+/// One entry in the professional directory — a user who has at least one
+/// professional/organization role (anything other than just "listener").
+class DirectoryEntry {
+  final String uid;
+  final String name;
+  final String? photoUrl;
+  final String? bio;
+  final List<String> roles;
+  final String? primaryRole;
+  final String? city;
+  final String? region;
+
+  const DirectoryEntry({
+    required this.uid,
+    required this.name,
+    this.photoUrl,
+    this.bio,
+    this.roles = const [],
+    this.primaryRole,
+    this.city,
+    this.region,
+  });
+
+  /// Whether this user belongs in the directory (has a non-listener role).
+  bool get isProfessional =>
+      roles.any((r) => r != RoleKeys.listener);
+
+  bool get isOrganization => rolesHaveOrganization(roles);
+
+  String get locationLine {
+    final parts = <String>[
+      if ((city ?? '').trim().isNotEmpty) city!.trim(),
+      if ((region ?? '').trim().isNotEmpty) region!.trim(),
+    ];
+    return parts.join(', ');
+  }
+
+  factory DirectoryEntry.fromDoc(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data() ?? const <String, dynamic>{};
+    final roles = parseRolesFromUserData(data);
+    final primary = roles.firstWhere(
+      (r) => r != RoleKeys.listener,
+      orElse: () => '',
+    );
+
+    final profileRole = pickProfileRole(data, preferred: primary) ?? '';
+    final pro = profileRole.isEmpty
+        ? const <String, dynamic>{}
+        : (readProProfiles(data)[profileRole] ?? const {});
+    final orgName = (pro['orgName'] ?? '').toString().trim();
+    final stageName = (pro['stageName'] ?? '').toString().trim();
+    final baseName = NameUtils.getDisplayNameSafe(
+      data['firstName']?.toString(),
+      data['secondName']?.toString(),
+      fallback: data['displayName']?.toString() ??
+          data['email']?.toString() ??
+          'User',
+    );
+    final name = orgName.isNotEmpty
+        ? orgName
+        : (stageName.isNotEmpty ? stageName : baseName);
+
+    String? pick(String key) {
+      final v = (pro[key] ?? data[key] ?? '').toString().trim();
+      return v.isEmpty ? null : v;
+    }
+
+    return DirectoryEntry(
+      uid: doc.id,
+      name: name,
+      photoUrl:
+          data['profileImage']?.toString() ?? data['photoURL']?.toString(),
+      bio: data['bio']?.toString(),
+      roles: roles,
+      primaryRole: primary.isEmpty ? null : primary,
+      city: pick('city'),
+      region: pick('region'),
+    );
+  }
+}

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../../widgets/app_badges.dart';
 import 'dart:developer';
 import 'package:beatjerky/providers/feeds_provider/feed_comments_provider.dart';
 import 'package:beatjerky/screens/New%20Feed/comment_screen.dart';
@@ -1571,10 +1572,11 @@ class _HomeCardState extends State<HomeCard> {
                                 .doc(widget.userId)
                                 .get(),
                             builder: (context, snap) {
-                              final paid =
-                                  (snap.data?.data()
-                                      as Map<String, dynamic>?)?['isPaid'] ??
-                                  false;
+                              final m = snap.data?.data()
+                                  as Map<String, dynamic>?;
+                              final paid = (m?['isPaid'] ?? false) == true;
+                              final verified =
+                                  (m?['verified'] ?? false) == true;
                               return Row(
                                 children: [
                                   Text(
@@ -1585,13 +1587,13 @@ class _HomeCardState extends State<HomeCard> {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  const SizedBox(width: 6),
-                                  if (paid)
-                                    const Icon(
-                                      Icons.check_circle,
-                                      color: Colors.blue,
-                                      size: 16,
-                                    ),
+                                  if (verified || paid)
+                                    const SizedBox(width: 6),
+                                  BadgeStrip(
+                                    verified: verified,
+                                    premium: paid,
+                                    size: 16,
+                                  ),
                                 ],
                               );
                             },
